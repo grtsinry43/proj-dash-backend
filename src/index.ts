@@ -1,12 +1,22 @@
-import express from 'express';
-const app = express();
+import Fastify from 'fastify';
+const fastify = Fastify({
+  logger: true
+});
 
-app.get('/', (req, res) => {
+fastify.get('/', async (request, reply) => {
   const name = process.env.NAME || 'World';
-  res.send(`Hello ${name}!`);
+  return `Hello ${name}!`;
 });
 
 const port = parseInt(process.env.PORT || '3000');
-app.listen(port, () => {
-  console.log(`listening on port ${port}`);
-});
+
+const start = async () => {
+  try {
+    await fastify.listen({ port });
+  } catch (err) {
+    fastify.log.error(err);
+    process.exit(1);
+  }
+};
+
+start();

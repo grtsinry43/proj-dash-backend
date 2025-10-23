@@ -1,0 +1,38 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id          String        @id @default(cuid())
+  githubId    String        @unique
+  username    String
+  avatarUrl   String
+  pullRequest PullRequest[]
+}
+
+model Repository {
+  id           Int           @id
+  name         String
+  owner        String
+  pullRequests PullRequest[]
+}
+
+model PullRequest {
+  id           String     @id @default(cuid())
+  number       Int
+  title        String
+  state        String
+  createdAt    DateTime   @map("created_at")
+  closedAt     DateTime?  @map("closed_at")
+  repository   Repository @relation(fields: [repositoryId], references: [id])
+  repositoryId Int
+  author       User       @relation(fields: [authorId], references: [id])
+  authorId     String
+
+  @@unique([repositoryId, number])
+}
