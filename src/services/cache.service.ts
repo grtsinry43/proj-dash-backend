@@ -11,6 +11,10 @@ export class CacheService {
   }
 
   async set(key: string, value: any, ttl?: number) {
-    return await redis.set(key, value, { ex: ttl });
+    // Only pass ex option if ttl is defined
+    if (ttl !== undefined) {
+      return await redis.set(key, value, { ex: ttl });
+    }
+    return await redis.set(key, value);
   }
 }

@@ -1,67 +1,78 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
+import { z } from 'zod';
 import { exchangeCodeForToken, getGithubUser } from '../services/github.service';
 import { prisma } from '../lib/prisma';
+import { createResponseSchema, successResponse, errorResponse, ErrorCode } from '../types/response';
 
-const loginSchema = {
-  body: {
-    type: 'object',
-    required: ['code'],
-    properties: {
-      code: { type: 'string' },
-    },
-  },
-  response: {
-    200: {
-      type: 'object',
-      properties: {
-        token: { type: 'string' },
-      },
-    },
-  },
-} as const;
+// Schema for login request body
+const loginBodySchema = z.object({
+  code: z.string().min(1, 'Authorization code is required'),
+});
 
-export async function authRoutes(app: FastifyInstance) {
+// Schema for login response data
+const loginDataSchema = z.object({
+  token: z.string(),
+});
+
+// Use the unified response format
+const loginSuccessSchema = createResponseSchema(loginDataSchema);
+const loginErrorSchema = createResponseSchema(z.null());
+
+export const authRoutes: FastifyPluginAsyncZod = async (app) => {
   app.post(
     '/login',
-    { schema: loginSchema },
+    {
+      schema: {
+        description: 'Login with GitHub OAuth code',
+        tags: ['auth'],
+        body: loginBodySchema,
+        response: {
+          200: loginSuccessSchema,
+          500: loginErrorSchema,
+        },
+      },
+    },
     async (request, reply) => {
-      // The type for request.body is inferred from the schema
+      // ✅ Type is automatically inferred from Zod schema
       const { code } = request.body;
 
       try {
         const accessToken = await exchangeCodeForToken(code);
         const githubUser = await getGithubUser(accessToken);
 
+        // Convert number to string as Prisma schema expects String
         let user = await prisma.user.findUnique({
-          where: { githubId: githubUser.id },
+          where: { githubId: String(githubUser.id) },
         });
 
         if (!user) {
           user = await prisma.user.create({
             data: {
-              githubId: githubUser.id, // Corrected: Use number directly
+              githubId: String(githubUser.id),
               username: githubUser.login,
               avatarUrl: githubUser.avatar_url,
             },
           });
         }
 
-        // The payload now matches the global FastifyJWT type
+        // Generate JWT token
         const token = app.jwt.sign(
           {
             sub: user.id,
             username: user.username,
             avatarUrl: user.avatarUrl,
-            accessToken, // The user's GitHub token
+            accessToken,
           },
           { expiresIn: '1d' },
         );
 
-        return { token };
+        return successResponse({ token });
       } catch (error) {
-        app.log.error('Authentication Error:', error);
-        reply.status(500).send({ error: 'Authentication failed' });
+        app.log.error({ error }, 'Authentication Error');
+        return reply
+          .status(500)
+          .send(errorResponse(ErrorCode.AUTH_FAILED, 'Authentication failed'));
       }
     },
   );
-}
+};

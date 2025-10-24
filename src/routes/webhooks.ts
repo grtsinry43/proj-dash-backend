@@ -1,34 +1,48 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
+import { z } from 'zod';
 import { verifyGithubWebhook } from '../middlewares/verify-webhook.middleware';
 import { handleWebhook } from '../services/webhook.service';
+import { GitHubWebhookPayload } from '../types/github';
+import { createResponseSchema, successResponse, errorResponse, ErrorCode } from '../types/response';
 
-// Define a basic schema to expect a JSON object payload.
-const webhookSchema = {
-  body: {
-    type: 'object',
-    // Since webhook payloads vary, we allow any properties.
-    // In a real application, you might add more specific validation
-    // based on the event types you expect to handle.
-    additionalProperties: true,
-  },
-} as const;
+// Schema for webhook payload (flexible since payloads vary by event type)
+const webhookBodySchema = z.record(z.string(), z.any());
 
-export async function webhookRoutes(app: FastifyInstance) {
+// Schema for webhook response data
+const webhookDataSchema = z.object({
+  message: z.string(),
+});
+
+// Use the unified response format
+const webhookSuccessSchema = createResponseSchema(webhookDataSchema);
+const webhookErrorSchema = createResponseSchema(z.null());
+
+export const webhookRoutes: FastifyPluginAsyncZod = async (app) => {
   app.post(
     '/github',
     {
       preHandler: verifyGithubWebhook,
-      schema: webhookSchema,
+      schema: {
+        description: 'Handle GitHub webhook events',
+        tags: ['webhooks'],
+        body: webhookBodySchema,
+        response: {
+          200: webhookSuccessSchema,
+          500: webhookErrorSchema,
+        },
+      },
     },
     async (request, reply) => {
       try {
-        // request.body is now safely typed as Record<string, any>
-        await handleWebhook(request.body);
-        reply.status(200).send({ message: 'Webhook received' });
+        // Type cast to GitHubWebhookPayload for service function
+        await handleWebhook(request.body as GitHubWebhookPayload);
+        return successResponse({ message: 'Webhook received' });
       } catch (error) {
-        app.log.error('Webhook processing error:', error);
-        reply.status(500).send({ error: 'Webhook processing failed' });
+        app.log.error({ error }, 'Webhook processing error');
+        return reply
+          .status(500)
+          .send(errorResponse(ErrorCode.INTERNAL_ERROR, 'Webhook processing failed'));
       }
     },
   );
-}
+};

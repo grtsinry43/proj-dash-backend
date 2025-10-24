@@ -14,6 +14,4 @@ export function verifyGithubWebhook(req: FastifyRequest, reply: FastifyReply) {
   if (digest !== signature) {
     return reply.status(401).send({ error: 'Invalid signature' });
   }
-
-  done();
 }

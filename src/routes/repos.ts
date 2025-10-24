@@ -1,7 +1,8 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { GitHubService } from '../services/github.service';
 import { authMiddleware } from '../middlewares/auth.middleware';
+import { createResponseSchema, successResponse } from '../types/response';
 
 // Schema for request parameters
 const repoParamsSchema = z.object({
@@ -37,9 +38,13 @@ const repoListItemSchema = z.object({
   }),
 });
 
-const reposListResponseSchema = z.array(repoListItemSchema);
+const reposListSchema = z.array(repoListItemSchema);
 
-export async function repoRoutes(app: FastifyInstance) {
+// Use the unified response format
+const reposListResponseSchema = createResponseSchema(reposListSchema);
+const repoStatsResponseSchema = createResponseSchema(repoStatsSchema);
+
+export const repoRoutes: FastifyPluginAsyncZod = async (app) => {
   // All routes in this plugin require authentication
   app.addHook('preHandler', authMiddleware);
 
@@ -48,16 +53,18 @@ export async function repoRoutes(app: FastifyInstance) {
     '/',
     {
       schema: {
+        description: 'Get repositories for authenticated user',
+        tags: ['repos'],
         response: {
           200: reposListResponseSchema,
         },
       },
     },
-    async (request, reply) => {
+    async (request) => {
       const { accessToken, username } = request.user!;
       const githubService = new GitHubService(accessToken, username);
       const repos = await githubService.getRepositories();
-      return repos;
+      return successResponse(repos);
     },
   );
 
@@ -66,18 +73,21 @@ export async function repoRoutes(app: FastifyInstance) {
     '/:owner/:repo/stats',
     {
       schema: {
+        description: 'Get statistics for a specific repository',
+        tags: ['repos'],
         params: repoParamsSchema,
         response: {
-          200: repoStatsSchema,
+          200: repoStatsResponseSchema,
         },
       },
     },
-    async (request, reply) => {
-      const { owner, repo } = request.params as z.infer<typeof repoParamsSchema>;
+    async (request) => {
+      // ✅ Type is automatically inferred from Zod schema
+      const { owner, repo } = request.params;
       const { accessToken, username } = request.user!;
       const githubService = new GitHubService(accessToken, username);
       const stats = await githubService.getRepositoryStats(owner, repo);
-      return stats;
+      return successResponse(stats);
     },
   );
-}
+};
