@@ -7,7 +7,8 @@ import { GitHubUser } from '../types/github';
 const GITHUB_API_BASE_URL = 'https://api.github.com';
 
 // Define a type for the repository list response data for clarity
-type ReposListForAuthenticatedUserResponse = Endpoints['GET /user/repos']['response']['data'];
+type ReposListForAuthenticatedUserResponse =
+  Endpoints['GET /user/repos']['response']['data'];
 
 export async function exchangeCodeForToken(code: string): Promise<string> {
   const response = await axios.post(
@@ -35,27 +36,31 @@ export async function getGithubUser(accessToken: string): Promise<GitHubUser> {
 
 export class GitHubService {
   private octokit: Octokit;
+  private username: string;
 
-  constructor(accessToken: string) {
+  constructor(accessToken: string, username: string) {
     this.octokit = new Octokit({ auth: accessToken });
+    this.username = username;
   }
 
   async getRepositories(): Promise<ReposListForAuthenticatedUserResponse> {
+    const cacheKey = `repos:${this.username}`;
+    const cachedRepos = await redis.get(cacheKey);
+
+    if (cachedRepos) {
+      return JSON.parse(cachedRepos as string);
+    }
+
     const { data } = await this.octokit.repos.listForAuthenticatedUser();
+    await redis.set(cacheKey, JSON.stringify(data), { ex: 3600 }); // Cache for 1 hour
+
     return data;
   }
 
-  async getRepositoryStats(owner: string, repo: string) {
-    const cacheKey = `repo-stats:${owner}:${repo}`;
-    const cachedStats = await redis.get(cacheKey);
-
-    if (cachedStats) {
-      return JSON.parse(cachedStats as string);
-    }
-
+  async getRepositoryStats(owner: string, repo: string, since?: string) {
     const [repoData, commits, releases, contributors] = await Promise.all([
       this.octokit.repos.get({ owner, repo }),
-      this.octokit.repos.listCommits({ owner, repo }),
+      this.octokit.repos.listCommits({ owner, repo, since }),
       this.octokit.repos.listReleases({ owner, repo }),
       this.octokit.repos.listContributors({ owner, repo }),
     ]);
@@ -68,8 +73,6 @@ export class GitHubService {
       releases: releases.data.length,
       contributors: contributors.data.length,
     };
-
-    await redis.set(cacheKey, JSON.stringify(stats), { ex: 3600 }); // Cache for 1 hour
 
     return stats;
   }

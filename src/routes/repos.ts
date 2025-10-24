@@ -1,43 +1,67 @@
 import { FastifyInstance } from 'fastify';
+import { z } from 'zod';
 import { GitHubService } from '../services/github.service';
 import { authMiddleware } from '../middlewares/auth.middleware';
 
-// Schema for the URL parameters
-const repoParamsSchema = {
-  type: 'object',
-  required: ['owner', 'repo'],
-  properties: {
-    owner: { type: 'string' },
-    repo: { type: 'string' },
-  },
-} as const; // Using 'as const' for stronger type inference
+// Schema for request parameters
+const repoParamsSchema = z.object({
+  owner: z.string(),
+  repo: z.string(),
+});
 
-// Schema for the response of the repository stats endpoint
-const repoStatsSchema = {
-  type: 'object',
-  properties: {
-    stars: { type: 'number' },
-    forks: { type: 'number' },
-    openIssues: { type: 'number' },
-    commits: { type: 'number' },
-    releases: { type: 'number' },
-    contributors: { type: 'number' },
-  },
-} as const;
+// Schema for repository statistics response
+const repoStatsSchema = z.object({
+  stars: z.number(),
+  forks: z.number(),
+  openIssues: z.number(),
+  commits: z.number(),
+  releases: z.number(),
+  contributors: z.number(),
+});
+
+// Schema for repository list response
+const repoListItemSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  full_name: z.string(),
+  private: z.boolean(),
+  html_url: z.string().url(),
+  description: z.string().nullable(),
+  stargazers_count: z.number(),
+  watchers_count: z.number(),
+  forks_count: z.number(),
+  language: z.string().nullable(),
+  owner: z.object({
+    login: z.string(),
+    avatar_url: z.string().url(),
+  }),
+});
+
+const reposListResponseSchema = z.array(repoListItemSchema);
 
 export async function repoRoutes(app: FastifyInstance) {
+  // All routes in this plugin require authentication
   app.addHook('preHandler', authMiddleware);
 
-  // This route retrieves all repositories for the authenticated user.
-  // The response type is inferred from Octokit, so a detailed schema is omitted for brevity,
-  // but in a real-world scenario, you might want to define the properties you actually use.
-  app.get('/', async (request, reply) => {
-    const githubService = new GitHubService(request.user.accessToken);
-    const repos = await githubService.getRepositories();
-    reply.send(repos);
-  });
+  // Route to list repositories for the authenticated user
+  app.get(
+    '/',
+    {
+      schema: {
+        response: {
+          200: reposListResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { accessToken, username } = request.user!;
+      const githubService = new GitHubService(accessToken, username);
+      const repos = await githubService.getRepositories();
+      return repos;
+    },
+  );
 
-  // This route gets specific stats for a single repository.
+  // Route to get statistics for a specific repository
   app.get(
     '/:owner/:repo/stats',
     {
@@ -49,13 +73,10 @@ export async function repoRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      // request.params is now strongly typed based on repoParamsSchema!
-      const { owner, repo } = request.params;
-      const githubService = new GitHubService(request.user.accessToken);
-
+      const { owner, repo } = request.params as z.infer<typeof repoParamsSchema>;
+      const { accessToken, username } = request.user!;
+      const githubService = new GitHubService(accessToken, username);
       const stats = await githubService.getRepositoryStats(owner, repo);
-
-      // The return type is validated against repoStatsSchema
       return stats;
     },
   );
