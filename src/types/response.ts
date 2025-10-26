@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod'
 
 /**
  * Standard API Response Format
@@ -8,12 +8,12 @@ import { z } from 'zod';
  */
 
 // Generic response schema creator
-export function createResponseSchema<T extends z.ZodTypeAny>(dataSchema: T) {
+export function createResponseSchema<T extends z.ZodType>(dataSchema: T) {
   return z.object({
     code: z.number(),
     msg: z.string(),
     data: dataSchema,
-  });
+  })
 }
 
 // Success response with data
@@ -22,7 +22,7 @@ export function successResponse<T>(data: T) {
     code: 0,
     msg: '',
     data,
-  };
+  }
 }
 
 // Error response
@@ -31,7 +31,7 @@ export function errorResponse(code: number, msg: string) {
     code,
     msg,
     data: null,
-  };
+  }
 }
 
 // Common error codes
@@ -45,11 +45,11 @@ export const ErrorCode = {
   AUTH_FAILED: 1001,
   GITHUB_API_ERROR: 1002,
   WEBHOOK_VERIFICATION_FAILED: 1003,
-} as const;
+} as const
 
 // Error response schema
 export const errorResponseSchema = z.object({
   code: z.number(),
   msg: z.string(),
   data: z.null(),
-});
+})

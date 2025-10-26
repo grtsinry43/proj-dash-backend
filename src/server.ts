@@ -1,19 +1,16 @@
-import fastify from 'fastify';
-import { 
-  serializerCompiler, 
-  validatorCompiler, 
-  ZodTypeProvider 
-} from 'fastify-type-provider-zod';
-import fastifyJwt from '@fastify/jwt';
-import fastifyCors from '@fastify/cors';
-import 'dotenv/config';
+import fastify from 'fastify'
+import type { ZodTypeProvider } from 'fastify-type-provider-zod'
+import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod'
+import fastifyJwt from '@fastify/jwt'
+import fastifyCors from '@fastify/cors'
+import 'dotenv/config'
 
-import { authRoutes } from './routes/auth';
-import { repoRoutes } from './routes/repos';
-import { statsRoutes } from './routes/stats';
-import { webhookRoutes } from './routes/webhooks';
+import { authRoutes } from '@/routes/auth'
+import { repoRoutes } from '@/routes/repos'
+import { statsRoutes } from '@/routes/stats'
+import { webhookRoutes } from '@/routes/webhooks'
 
-import swagger from '@fastify/swagger';
+import swagger from '@fastify/swagger'
 
 // Main function to bootstrap the server
 async function bootstrap() {
@@ -28,21 +25,21 @@ async function bootstrap() {
         },
       },
     },
-  }).withTypeProvider<ZodTypeProvider>();
+  }).withTypeProvider<ZodTypeProvider>()
 
   // Set the validator and serializer for Zod
-  app.setValidatorCompiler(validatorCompiler);
-  app.setSerializerCompiler(serializerCompiler);
+  app.setValidatorCompiler(validatorCompiler)
+  app.setSerializerCompiler(serializerCompiler)
 
   // Register plugins
   await app.register(fastifyJwt, {
-    secret: process.env.JWT_SECRET!,
-  });
+    secret: process.env.JWT_SECRET,
+  })
 
   await app.register(fastifyCors, {
     origin: process.env.FRONTEND_URL || 'http://localhost:3000',
     credentials: true,
-  });
+  })
 
   // Register Swagger for OpenAPI spec generation
   await app.register(swagger, {
@@ -67,11 +64,11 @@ async function bootstrap() {
         },
       ],
     },
-  });
+  })
 
   // --- Docs portal ---
   // Top-level docs landing page that links to multiple renderers (ReDoc, Stoplight Elements, RapiDoc)
-  app.get('/docs', (req, reply) => {
+  app.get('/docs', (_, reply) => {
     reply.type('text/html').send(`
       <!doctype html>
       <html>
@@ -118,11 +115,11 @@ async function bootstrap() {
         </div>
       </body>
       </html>
-    `);
-  });
+    `)
+  })
 
   // --- RapiDoc route (moved from /docs to /docs/rapidoc) ---
-  app.get('/docs/rapidoc', (req, reply) => {
+  app.get('/docs/rapidoc', (_, reply) => {
     reply.type('text/html').send(`
       <!doctype html>
       <html>
@@ -141,12 +138,12 @@ async function bootstrap() {
         > </rapi-doc>
       </body>
       </html>
-    `);
-  });
+    `)
+  })
 
   // --- API Documentation with ReDoc (alternative nicer UI) ---
   // ReDoc gives a clean, modern single-page OpenAPI rendering similar to Knife4j's look.
-  app.get('/docs/redoc', (req, reply) => {
+  app.get('/docs/redoc', (_, reply) => {
     reply.type('text/html').send(`
       <!doctype html>
       <html>
@@ -175,12 +172,12 @@ async function bootstrap() {
         </script>
       </body>
       </html>
-    `);
-  });
+    `)
+  })
 
   // --- Stoplight Elements (interactive, Knife4j-like feel) ---
   // Uses Stoplight Elements Web Components from CDN to render a modern interactive portal.
-  app.get('/docs/stoplight', (req, reply) => {
+  app.get('/docs/stoplight', (_, reply) => {
     reply.type('text/html').send(`
       <!doctype html>
       <html>
@@ -227,35 +224,36 @@ async function bootstrap() {
         </main>
       </body>
       </html>
-    `);
-  });
+    `)
+  })
 
-  app.get('/docs/json', (req, reply) => {
-    reply.send(app.swagger());
-  });
+  app.get('/docs/json', (_, reply) => {
+    reply.send(app.swagger())
+  })
 
   // Register routes
-  await app.register(authRoutes, { prefix: '/auth' });
-  await app.register(repoRoutes, { prefix: '/repos' });
-  await app.register(statsRoutes, { prefix: '/stats' });
-  await app.register(webhookRoutes, { prefix: '/webhooks' });
+  await app.register(authRoutes, { prefix: '/auth' })
+  await app.register(repoRoutes, { prefix: '/repos' })
+  await app.register(statsRoutes, { prefix: '/stats' })
+  await app.register(webhookRoutes, { prefix: '/webhooks' })
 
   // Add a generic error handler
-  app.setErrorHandler((error, request, reply) => {
-    app.log.error(error);
-    reply.status(500).send({ error: 'Internal Server Error' });
-  });
+  app.setErrorHandler((error, _, reply) => {
+    app.log.error(error)
+    reply.status(500).send({ error: 'Internal Server Error' })
+  })
 
-  return app;
+  return app
 }
 
 // Start the server
-(async () => {
+await (async () => {
   try {
-    const app = await bootstrap();
-    await app.listen({ port: 3333, host: '0.0.0.0' });
+    const app = await bootstrap()
+    await app.listen({ port: 3333, host: '0.0.0.0' })
   } catch (err) {
-    console.error(err);
-    process.exit(1);
+    console.error(err)
+    // eslint-disable-next-line n/no-process-exit
+    process.exit(1)
   }
-})();
+})()

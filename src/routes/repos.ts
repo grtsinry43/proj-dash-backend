@@ -1,14 +1,14 @@
-import { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
-import { z } from 'zod';
-import { GitHubService } from '../services/github.service';
-import { authMiddleware } from '../middlewares/auth.middleware';
-import { createResponseSchema, successResponse } from '../types/response';
+import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
+import { z } from 'zod'
+import { GitHubService } from '@/services/github.service'
+import { authMiddleware } from '@/middlewares/auth.middleware'
+import { createResponseSchema, successResponse } from '@/types/response'
 
 // Schema for request parameters
 const repoParamsSchema = z.object({
   owner: z.string(),
   repo: z.string(),
-});
+})
 
 // Schema for repository statistics response
 const repoStatsSchema = z.object({
@@ -18,7 +18,7 @@ const repoStatsSchema = z.object({
   commits: z.number(),
   releases: z.number(),
   contributors: z.number(),
-});
+})
 
 // Schema for repository list response
 const repoListItemSchema = z.object({
@@ -26,7 +26,7 @@ const repoListItemSchema = z.object({
   name: z.string(),
   full_name: z.string(),
   private: z.boolean(),
-  html_url: z.string().url(),
+  html_url: z.url(),
   description: z.string().nullable(),
   stargazers_count: z.number(),
   watchers_count: z.number(),
@@ -34,19 +34,19 @@ const repoListItemSchema = z.object({
   language: z.string().nullable(),
   owner: z.object({
     login: z.string(),
-    avatar_url: z.string().url(),
+    avatar_url: z.url(),
   }),
-});
+})
 
-const reposListSchema = z.array(repoListItemSchema);
+const reposListSchema = z.array(repoListItemSchema)
 
 // Use the unified response format
-const reposListResponseSchema = createResponseSchema(reposListSchema);
-const repoStatsResponseSchema = createResponseSchema(repoStatsSchema);
+const reposListResponseSchema = createResponseSchema(reposListSchema)
+const repoStatsResponseSchema = createResponseSchema(repoStatsSchema)
 
 export const repoRoutes: FastifyPluginAsyncZod = async (app) => {
   // All routes in this plugin require authentication
-  app.addHook('preHandler', authMiddleware);
+  app.addHook('preHandler', authMiddleware)
 
   // Route to list repositories for the authenticated user
   app.get(
@@ -61,12 +61,12 @@ export const repoRoutes: FastifyPluginAsyncZod = async (app) => {
       },
     },
     async (request) => {
-      const { accessToken, username } = request.user!;
-      const githubService = new GitHubService(accessToken, username);
-      const repos = await githubService.getRepositories();
-      return successResponse(repos);
-    },
-  );
+      const { accessToken, username } = request.user
+      const githubService = new GitHubService(accessToken, username)
+      const repos = await githubService.getRepositories()
+      return successResponse(repos)
+    }
+  )
 
   // Route to get statistics for a specific repository
   app.get(
@@ -83,11 +83,11 @@ export const repoRoutes: FastifyPluginAsyncZod = async (app) => {
     },
     async (request) => {
       // ✅ Type is automatically inferred from Zod schema
-      const { owner, repo } = request.params;
-      const { accessToken, username } = request.user!;
-      const githubService = new GitHubService(accessToken, username);
-      const stats = await githubService.getRepositoryStats(owner, repo);
-      return successResponse(stats);
-    },
-  );
-};
+      const { owner, repo } = request.params
+      const { accessToken, username } = request.user
+      const githubService = new GitHubService(accessToken, username)
+      const stats = await githubService.getRepositoryStats(owner, repo)
+      return successResponse(stats)
+    }
+  )
+}

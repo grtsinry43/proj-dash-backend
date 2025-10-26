@@ -1,9 +1,17 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@prisma/client'
 
-// Prevent creating multiple instances of PrismaClient in development
-// when using hot-reloading (ts-node-dev / nodemon).
-const g = global as any;
+const prismaClientSingleton = () => {
+  return new PrismaClient()
+}
 
-export const prisma: PrismaClient = g.__prisma ?? new PrismaClient();
+declare const globalThis: {
+  prismaGlobal: ReturnType<typeof prismaClientSingleton> | undefined
+} & typeof global
 
-if (process.env.NODE_ENV !== 'production') g.__prisma = prisma;
+const prisma = globalThis.prismaGlobal ?? prismaClientSingleton()
+
+export default prisma
+
+if (process.env['NODE_ENV'] !== 'production') {
+  globalThis.prismaGlobal = prisma
+}

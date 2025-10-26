@@ -1,14 +1,13 @@
-import { Octokit } from '@octokit/rest';
-import { Endpoints } from '@octokit/types';
-import axios from 'axios';
-import { redis } from '../lib/redis';
-import { GitHubUser } from '../types/github';
+import { Octokit } from '@octokit/rest'
+import type { Endpoints } from '@octokit/types'
+import axios from 'axios'
+import { redis } from '@/lib/redis'
+import type { GitHubUser } from '@/types/github'
 
-const GITHUB_API_BASE_URL = 'https://api.github.com';
+const GITHUB_API_BASE_URL = 'https://api.github.com'
 
 // Define a type for the repository list response data for clarity
-type ReposListForAuthenticatedUserResponse =
-  Endpoints['GET /user/repos']['response']['data'];
+type ReposListForAuthenticatedUserResponse = Endpoints['GET /user/repos']['response']['data']
 
 export async function exchangeCodeForToken(code: string): Promise<string> {
   const response = await axios.post(
@@ -20,41 +19,43 @@ export async function exchangeCodeForToken(code: string): Promise<string> {
     },
     {
       headers: { Accept: 'application/json' },
-    },
-  );
+    }
+  )
 
-  return response.data.access_token;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return,@typescript-eslint/no-unsafe-member-access
+  return response.data?.access_token
 }
 
 export async function getGithubUser(accessToken: string): Promise<GitHubUser> {
   const response = await axios.get<GitHubUser>(`${GITHUB_API_BASE_URL}/user`, {
     headers: { Authorization: `Bearer ${accessToken}` },
-  });
+  })
 
-  return response.data;
+  return response.data
 }
 
 export class GitHubService {
-  private octokit: Octokit;
-  private username: string;
+  private octokit: Octokit
+  private username: string
 
   constructor(accessToken: string, username: string) {
-    this.octokit = new Octokit({ auth: accessToken });
-    this.username = username;
+    this.octokit = new Octokit({ auth: accessToken })
+    this.username = username
   }
 
   async getRepositories(): Promise<ReposListForAuthenticatedUserResponse> {
-    const cacheKey = `repos:${this.username}`;
-    const cachedRepos = await redis.get(cacheKey);
+    const cacheKey = `repos:${this.username}`
+    const cachedRepos = await redis.get(cacheKey)
 
     if (cachedRepos) {
-      return JSON.parse(cachedRepos as string);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+      return JSON.parse(cachedRepos as string)
     }
 
-    const { data } = await this.octokit.repos.listForAuthenticatedUser();
-    await redis.set(cacheKey, JSON.stringify(data), { ex: 3600 }); // Cache for 1 hour
+    const { data } = await this.octokit.repos.listForAuthenticatedUser()
+    await redis.set(cacheKey, JSON.stringify(data), { ex: 3600 }) // Cache for 1 hour
 
-    return data;
+    return data
   }
 
   async getRepositoryStats(owner: string, repo: string, since?: string) {
@@ -63,7 +64,7 @@ export class GitHubService {
       this.octokit.repos.listCommits({ owner, repo, since }),
       this.octokit.repos.listReleases({ owner, repo }),
       this.octokit.repos.listContributors({ owner, repo }),
-    ]);
+    ])
 
     const stats = {
       stars: repoData.data.stargazers_count,
@@ -72,8 +73,8 @@ export class GitHubService {
       commits: commits.data.length,
       releases: releases.data.length,
       contributors: contributors.data.length,
-    };
+    }
 
-    return stats;
+    return stats
   }
 }

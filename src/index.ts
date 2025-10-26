@@ -1,22 +1,24 @@
-import Fastify from 'fastify';
+import Fastify from 'fastify'
 const fastify = Fastify({
-  logger: true
-});
+  logger: true,
+})
 
-fastify.get('/', async (request, reply) => {
-  const name = process.env.NAME || 'World';
-  return `Hello ${name}!`;
-});
+fastify.get('/', async () => {
+  const name = process.env['NAME'] || 'World'
+  return `Hello ${name}!`
+})
 
-const port = parseInt(process.env.PORT || '3000');
+const port = parseInt(process.env['PORT'] || '3000')
 
 const start = async () => {
   try {
-    await fastify.listen({ port });
+    await fastify.listen({ port })
   } catch (err) {
-    fastify.log.error(err);
-    process.exit(1);
+    fastify.log.error(err)
+    // eslint-disable-next-line n/no-process-exit
+    process.exit(1)
   }
-};
+}
 
-start();
+// eslint-disable-next-line @typescript-eslint/no-floating-promises
+start().then((r) => console.log(r))

@@ -1,17 +1,17 @@
-import { prisma } from '../lib/prisma';
-import { GitHubWebhookPayload } from '../types/github';
+import prisma from '@/lib/prisma'
+import type { GitHubWebhookPayload } from '@/types/github'
 
 export async function handleWebhook(payload: GitHubWebhookPayload) {
-  const { action, pull_request, repository } = payload;
+  const { action, pull_request, repository } = payload
 
   if (action === 'opened' || action === 'closed') {
-    const { number, title, state, user, created_at, closed_at } = pull_request;
+    const { number, title, state, user, created_at, closed_at } = pull_request
 
     await prisma.pullRequest.upsert({
       where: { repositoryId_number: { repositoryId: repository.id, number } },
-      update: { 
-        state, 
-        closedAt: closed_at ? new Date(closed_at) : null 
+      update: {
+        state,
+        closedAt: closed_at ? new Date(closed_at) : null,
       },
       create: {
         number,
@@ -40,6 +40,6 @@ export async function handleWebhook(payload: GitHubWebhookPayload) {
           },
         },
       },
-    });
+    })
   }
 }

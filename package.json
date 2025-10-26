@@ -9,7 +9,14 @@
     "build": "prisma generate && tsc",
     "start": "node dist/server.js",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev"
+    "prisma:migrate": "prisma migrate dev",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "type-check": "tsc --noEmit",
+    "validate": "npm run type-check && npm run lint && npm run format:check",
+    "prepare": "husky"
   },
   "author": "Google LLC",
   "license": "Apache-2.0",
@@ -17,22 +24,54 @@
     "@fastify/cors": "^11.1.0",
     "@fastify/jwt": "^10.0.0",
     "@fastify/swagger": "^9.5.2",
-    "@octokit/rest": "^19.0.13",
+    "@octokit/rest": "^22.0.0",
     "@octokit/types": "^15.0.1",
     "@prisma/client": "^6.18.0",
     "@upstash/redis": "^1.35.6",
     "axios": "^1.12.2",
     "dotenv": "^17.2.3",
     "fastify": "^5.6.1",
-    "fastify-type-provider-zod": "^6.0.0",
+    "fastify-type-provider-zod": "^6.1.0",
+    "prettier-plugin-eslint": "^1.0.2",
     "zod": "^4.1.12"
   },
   "devDependencies": {
-    "@types/node": "^20.12.12",
-    "nodemon": "^3.1.0",
+    "@commitlint/cli": "^20.1.0",
+    "@commitlint/config-conventional": "^20.0.0",
+    "@eslint/js": "^9.38.0",
+    "@types/node": "^24.9.1",
+    "@typescript-eslint/eslint-plugin": "^8.46.2",
+    "@typescript-eslint/parser": "^8.46.2",
+    "eslint": "^9.38.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-helpers": "^1.2.1",
+    "eslint-plugin-fastify-security-rules": "^1.2.0",
+    "eslint-plugin-n": "^17.23.1",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-prettier": "^5.5.4",
+    "eslint-plugin-security": "^3.0.1",
+    "eslint-plugin-security-node": "^1.1.4",
+    "fastify-tsconfig": "^3.0.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.6",
+    "nodemon": "^3.1.10",
     "pino-pretty": "^13.1.2",
+    "prettier": "^3.6.2",
     "prisma": "^6.18.0",
     "ts-node-dev": "^2.0.0",
-    "typescript": "^5.4.5"
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.2"
+  },
+  "lint-staged": {
+    "*.{ts,js,mjs}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ],
+    "*.prisma": [
+      "prisma format"
+    ]
   }
 }
