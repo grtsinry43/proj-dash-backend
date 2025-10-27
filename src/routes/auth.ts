@@ -23,7 +23,7 @@ export const authRoutes: FastifyPluginAsyncZod = async (app) => {
     '/login',
     {
       schema: {
-        description: 'Login with GitHub OAuth code',
+        description: 'Login with GitHub App OAuth code (user-to-server authentication)',
         tags: ['auth'],
         body: loginBodySchema,
         response: {

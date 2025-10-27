@@ -88,7 +88,7 @@ GitHub API rate limits apply. Authenticated requests: 5,000/hour.
           description: 'Local development server',
         },
         {
-          url: 'https://api.projectdash.example.com',
+          url: 'https://zany-couscous-jg4x4q5q6gj2p945-3333.app.github.dev/',
           description: 'Production server',
         },
       ],
