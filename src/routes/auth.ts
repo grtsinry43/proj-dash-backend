@@ -1,6 +1,6 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 import { z } from 'zod'
-import { exchangeCodeForToken, getGithubUser } from '@services/github.service'
+import { exchangeCodeForToken, getGithubUser } from '@/services/github.service'
 import prisma from '@/lib/prisma'
 import { createResponseSchema, ErrorCode, errorResponse, successResponse } from '@/types/response'
 
@@ -45,15 +45,13 @@ export const authRoutes: FastifyPluginAsyncZod = async (app) => {
           where: { githubId: String(githubUser.id) },
         })
 
-        if (!user) {
-          user = await prisma.user.create({
-            data: {
-              githubId: String(githubUser.id),
-              username: githubUser.login,
-              avatarUrl: githubUser.avatar_url,
-            },
-          })
-        }
+        user ??= await prisma.user.create({
+          data: {
+            githubId: String(githubUser.id),
+            username: githubUser.login,
+            avatarUrl: githubUser.avatar_url,
+          },
+        })
 
         // Generate JWT token
         const token = app.jwt.sign(

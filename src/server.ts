@@ -1,6 +1,10 @@
 import fastify from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
-import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod'
+import {
+  jsonSchemaTransform,
+  serializerCompiler,
+  validatorCompiler,
+} from 'fastify-type-provider-zod'
 import fastifyJwt from '@fastify/jwt'
 import fastifyCors from '@fastify/cors'
 import 'dotenv/config'
@@ -43,6 +47,7 @@ async function bootstrap() {
 
   // Register Swagger for OpenAPI spec generation
   await app.register(swagger, {
+    transform: jsonSchemaTransform,
     openapi: {
       info: {
         title: 'Project Dash API',
@@ -123,7 +128,6 @@ GitHub API rate limits apply. Authenticated requests: 5,000/hour.
     },
   })
 
-
   app.get('/docs', (_, reply) => {
     reply.type('text/html').send(`
       <!doctype html>
@@ -182,7 +186,7 @@ GitHub API rate limits apply. Authenticated requests: 5,000/hour.
 }
 
 // Start the server
-await (async () => {
+void (async () => {
   try {
     const app = await bootstrap()
     await app.listen({ port: 3333, host: '0.0.0.0' })

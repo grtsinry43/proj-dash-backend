@@ -41,11 +41,11 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],
-      "@config/*": ["src/config/*"],
-      "@routes/*": ["src/routes/*"],
-      "@services/*": ["src/services/*"],
-      "@utils/*": ["src/utils/*"],
-      "@types/*": ["src/types/*"]
+      "@/config/*": ["src/config/*"],
+      "@/routes/*": ["src/routes/*"],
+      "@/services/*": ["src/services/*"],
+      "@/utils/*": ["src/utils/*"],
+      "@/types/*": ["src/types/*"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.d.ts", "node_modules/@prisma/client"],
