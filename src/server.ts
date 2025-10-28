@@ -13,6 +13,7 @@ import { authRoutes } from '@/routes/auth'
 import { repoRoutes } from '@/routes/repos'
 import { statsRoutes } from '@/routes/stats'
 import { webhookRoutes } from '@/routes/webhooks'
+import { ErrorCode, errorResponse } from '@/types/response'
 
 import swagger from '@fastify/swagger'
 
@@ -177,10 +178,17 @@ GitHub API rate limits apply. Authenticated requests: 5,000/hour.
   await app.register(statsRoutes, { prefix: '/stats' })
   await app.register(webhookRoutes, { prefix: '/webhooks' })
 
+  // Add 404 not found handler
+  app.setNotFoundHandler((request, reply) => {
+    reply
+      .status(404)
+      .send(errorResponse(ErrorCode.NOT_FOUND, `Route ${request.method}:${request.url} not found`))
+  })
+
   // Add a generic error handler
   app.setErrorHandler((error, _, reply) => {
     app.log.error(error)
-    reply.status(500).send({ error: 'Internal Server Error' })
+    reply.status(500).send(errorResponse(ErrorCode.INTERNAL_ERROR, 'Internal Server Error'))
   })
   return app
 }

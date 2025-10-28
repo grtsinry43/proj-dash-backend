@@ -1,4 +1,5 @@
 import type { FastifyReply, FastifyRequest } from 'fastify'
+import { ErrorCode, errorResponse } from '../types/response'
 
 /**
  * This middleware function verifies the JWT token from the request.
@@ -13,6 +14,6 @@ export const authMiddleware = async (req: FastifyRequest, reply: FastifyReply) =
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (error) {
     // If verification fails, send an unauthorized error
-    reply.status(401).send({ error: 'Unauthorized' })
+    reply.status(401).send(errorResponse(ErrorCode.UNAUTHORIZED, 'Unauthorized'))
   }
 }

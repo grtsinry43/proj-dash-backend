@@ -12,14 +12,79 @@ model User {
   githubId    String        @unique
   username    String
   avatarUrl   String
+  accessToken String? // Store encrypted GitHub access token
   pullRequest PullRequest[]
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  @@map("users")
 }
 
 model Repository {
-  id           Int           @id
-  name         String
-  owner        String
+  id          Int     @id // GitHub repository ID
+  name        String
+  fullName    String  @unique @map("full_name") // owner/repo
+  owner       String
+  description String?
+  htmlUrl     String  @map("html_url")
+  homepage    String?
+
+  // Visibility and status
+  isPrivate  Boolean @default(false) @map("is_private")
+  isFork     Boolean @default(false) @map("is_fork")
+  isArchived Boolean @default(false) @map("is_archived")
+  isTemplate Boolean @default(false) @map("is_template")
+
+  // Real-time statistics (cached in Redis, snapshot in DB)
+  stargazersCount Int @default(0) @map("stargazers_count")
+  forksCount      Int @default(0) @map("forks_count")
+  watchersCount   Int @default(0) @map("watchers_count")
+  openIssuesCount Int @default(0) @map("open_issues_count")
+  size            Int @default(0) // Repository size in KB
+
+  // Language and topics
+  language  String? // Primary language
+  languages Json? // Language distribution { "JavaScript": 12345, "TypeScript": 6789 }
+  topics    String[] @default([])
+
+  // License
+  licenseName String? @map("license_name")
+  licenseKey  String? @map("license_key")
+
+  // Timestamps
+  githubCreatedAt DateTime  @map("github_created_at")
+  githubUpdatedAt DateTime  @map("github_updated_at")
+  githubPushedAt  DateTime? @map("github_pushed_at")
+
+  // Local timestamps
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  lastSyncedAt DateTime? @map("last_synced_at") // Last time we synced from GitHub API
+
+  // Relations
   pullRequests PullRequest[]
+  stats        RepositoryStats[]
+
+  @@map("repositories")
+}
+
+// Historical statistics snapshots for trend analysis
+model RepositoryStats {
+  id           String     @id @default(cuid())
+  repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  repositoryId Int        @map("repository_id")
+
+  // Statistics snapshot
+  stargazersCount Int @map("stargazers_count")
+  forksCount      Int @map("forks_count")
+  watchersCount   Int @map("watchers_count")
+  openIssuesCount Int @map("open_issues_count")
+
+  // Timestamp
+  snapshotAt DateTime @default(now()) @map("snapshot_at")
+
+  @@index([repositoryId, snapshotAt])
+  @@map("repository_stats")
 }
 
 model PullRequest {
@@ -29,10 +94,11 @@ model PullRequest {
   state        String
   createdAt    DateTime   @map("created_at")
   closedAt     DateTime?  @map("closed_at")
-  repository   Repository @relation(fields: [repositoryId], references: [id])
-  repositoryId Int
+  repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  repositoryId Int        @map("repository_id")
   author       User       @relation(fields: [authorId], references: [id])
-  authorId     String
+  authorId     String     @map("author_id")
 
   @@unique([repositoryId, number])
+  @@map("pull_requests")
 }

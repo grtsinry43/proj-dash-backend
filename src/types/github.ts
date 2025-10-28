@@ -29,6 +29,28 @@ export interface GitHubWebhookPayload {
   repository: {
     id: number
     name: string
+    full_name: string
+    description: string | null
+    html_url: string
+    homepage: string | null
+    private: boolean
+    fork: boolean
+    archived: boolean
+    is_template?: boolean
+    stargazers_count: number
+    forks_count: number
+    watchers_count: number
+    open_issues_count: number
+    size: number
+    language: string | null
+    topics?: string[]
+    license?: {
+      key: string
+      name: string
+    } | null
+    created_at: string
+    updated_at: string
+    pushed_at: string | null
     owner: {
       login: string
     }
