@@ -11,6 +11,8 @@ import 'dotenv/config'
 
 import { authRoutes } from '@/routes/auth'
 import { repoRoutes } from '@/routes/repos'
+import { activityRoutes } from '@/routes/activity'
+import { codeStatsRoutes } from '@/routes/code-stats'
 import { statsRoutes } from '@/routes/stats'
 import { webhookRoutes } from '@/routes/webhooks'
 import { ErrorCode, errorResponse } from '@/types/response'
@@ -118,6 +120,14 @@ GitHub API rate limits apply. Authenticated requests: 5,000/hour.
           description: 'Repository management and statistics',
         },
         {
+          name: 'activity',
+          description: 'Repository activity timeline (commits, PRs, issues)',
+        },
+        {
+          name: 'code-stats',
+          description: 'Code statistics and analysis (languages, file structure, hot files)',
+        },
+        {
           name: 'stats',
           description: 'User statistics and analytics',
         },
@@ -175,6 +185,8 @@ GitHub API rate limits apply. Authenticated requests: 5,000/hour.
   // Register routes
   await app.register(authRoutes, { prefix: '/auth' })
   await app.register(repoRoutes, { prefix: '/repos' })
+  await app.register(activityRoutes, { prefix: '/activity' })
+  await app.register(codeStatsRoutes, { prefix: '/code-stats' })
   await app.register(statsRoutes, { prefix: '/stats' })
   await app.register(webhookRoutes, { prefix: '/webhooks' })
 

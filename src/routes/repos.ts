@@ -46,7 +46,7 @@ const repoOverviewSchema = z.object({
   size: z.number(),
   language: z.string().nullable(),
   languages: z.record(z.string(), z.number()).nullable(),
-  topics: z.array(z.string()),
+  topics: z.string().array(),
   licenseName: z.string().nullable(),
   licenseKey: z.string().nullable(),
   githubCreatedAt: z.date(),
@@ -81,7 +81,7 @@ const repoListItemSchema = z.object({
   }),
 })
 
-const reposListSchema = z.array(repoListItemSchema)
+const reposListSchema = repoListItemSchema.array()
 
 // Use the unified response format
 const reposListResponseSchema = createResponseSchema(reposListSchema)
