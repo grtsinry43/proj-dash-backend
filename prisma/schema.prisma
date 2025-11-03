@@ -64,6 +64,9 @@ model Repository {
   // Relations
   pullRequests PullRequest[]
   stats        RepositoryStats[]
+  contributors Contributor[]
+  releases     Release[]
+  workflows    Workflow[]
 
   @@map("repositories")
 }
@@ -101,4 +104,260 @@ model PullRequest {
 
   @@unique([repositoryId, number])
   @@map("pull_requests")
+}
+
+// Contributor information for a repository
+model Contributor {
+  id        String @id @default(cuid())
+  githubId  Int    @map("github_id") // GitHub user ID
+  login     String // GitHub username
+  avatarUrl String @map("avatar_url")
+  htmlUrl   String @map("html_url")
+  type      String @default("User") // User, Bot, etc.
+
+  // Repository relation
+  repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  repositoryId Int        @map("repository_id")
+
+  // Contribution statistics
+  totalContributions  Int       @default(0) @map("total_contributions") // Total commits
+  totalAdditions      Int       @default(0) @map("total_additions") // Total lines added
+  totalDeletions      Int       @default(0) @map("total_deletions") // Total lines deleted
+  firstContributionAt DateTime? @map("first_contribution_at") // First commit date
+  lastContributionAt  DateTime? @map("last_contribution_at") // Last commit date
+
+  // Timestamps
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  lastSyncedAt DateTime @default(now()) @map("last_synced_at")
+
+  // Relations
+  weeklyStats ContributorWeeklyStats[]
+
+  @@unique([repositoryId, githubId])
+  @@index([repositoryId])
+  @@index([login])
+  @@map("contributors")
+}
+
+// Weekly contribution statistics for contributors
+model ContributorWeeklyStats {
+  id            String      @id @default(cuid())
+  contributor   Contributor @relation(fields: [contributorId], references: [id], onDelete: Cascade)
+  contributorId String      @map("contributor_id")
+
+  // Week timestamp (Unix timestamp of the start of the week)
+  weekTimestamp Int @map("week_timestamp")
+
+  // Weekly statistics
+  additions Int @default(0) // Lines added this week
+  deletions Int @default(0) // Lines deleted this week
+  commits   Int @default(0) // Commits this week
+
+  // Timestamp
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([contributorId, weekTimestamp])
+  @@index([contributorId, weekTimestamp])
+  @@map("contributor_weekly_stats")
+}
+
+// Release information for a repository
+model Release {
+  id       String @id @default(cuid())
+  githubId Int    @unique @map("github_id") // GitHub release ID
+
+  // Repository relation
+  repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  repositoryId Int        @map("repository_id")
+
+  // Release metadata
+  tagName         String  @map("tag_name") // e.g., "v1.0.0"
+  targetCommitish String? @map("target_commitish") // Branch/commit the tag is created from
+  name            String? // Release title
+  body            String? @db.Text // Release notes/description (Markdown)
+
+  // Status
+  isDraft      Boolean @default(false) @map("is_draft")
+  isPrerelease Boolean @default(false) @map("is_prerelease")
+
+  // Author information
+  authorLogin     String  @map("author_login")
+  authorAvatarUrl String? @map("author_avatar_url")
+
+  // URLs
+  htmlUrl    String @map("html_url")
+  assetsUrl  String @map("assets_url")
+  uploadUrl  String @map("upload_url")
+  tarballUrl String @map("tarball_url")
+  zipballUrl String @map("zipball_url")
+
+  // GitHub timestamps
+  githubCreatedAt   DateTime  @map("github_created_at")
+  githubPublishedAt DateTime? @map("github_published_at")
+
+  // Local timestamps
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  lastSyncedAt DateTime @default(now()) @map("last_synced_at")
+
+  // Relations
+  assets ReleaseAsset[]
+
+  @@unique([repositoryId, tagName])
+  @@index([repositoryId])
+  @@index([tagName])
+  @@index([githubPublishedAt])
+  @@map("releases")
+}
+
+// Release asset (downloadable file) information
+model ReleaseAsset {
+  id       String @id @default(cuid())
+  githubId Int    @unique @map("github_id") // GitHub asset ID
+
+  // Release relation
+  release   Release @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+  releaseId String  @map("release_id")
+
+  // Asset metadata
+  name        String // File name
+  label       String? // Custom label
+  contentType String  @map("content_type") // MIME type
+  state       String  @default("uploaded") // uploaded, deleted, etc.
+  size        Int // File size in bytes
+
+  // Download statistics
+  downloadCount Int @default(0) @map("download_count")
+
+  // URLs
+  browserDownloadUrl String @map("browser_download_url")
+
+  // Uploader information
+  uploaderLogin     String  @map("uploader_login")
+  uploaderAvatarUrl String? @map("uploader_avatar_url")
+
+  // GitHub timestamps
+  githubCreatedAt DateTime @map("github_created_at")
+  githubUpdatedAt DateTime @map("github_updated_at")
+
+  // Local timestamps
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  lastSyncedAt DateTime @default(now()) @map("last_synced_at")
+
+  @@index([releaseId])
+  @@index([name])
+  @@map("release_assets")
+}
+
+// GitHub Actions Workflow
+model Workflow {
+  id       String @id @default(cuid())
+  githubId Int    @unique @map("github_id") // GitHub workflow ID
+
+  // Repository relation
+  repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  repositoryId Int        @map("repository_id")
+
+  // Workflow metadata
+  name     String // Workflow name
+  path     String // .github/workflows/xxx.yml
+  state    String  @default("active") // active, disabled, etc.
+  badgeUrl String? @map("badge_url") // Badge URL
+
+  // GitHub timestamps
+  githubCreatedAt DateTime @map("github_created_at")
+  githubUpdatedAt DateTime @map("github_updated_at")
+
+  // Local timestamps
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  lastSyncedAt DateTime @default(now()) @map("last_synced_at")
+
+  // Relations
+  runs WorkflowRun[]
+
+  @@unique([repositoryId, githubId])
+  @@index([repositoryId])
+  @@index([path])
+  @@map("workflows")
+}
+
+// GitHub Actions Workflow Run
+model WorkflowRun {
+  id       String @id @default(cuid())
+  githubId Int    @unique @map("github_id") // GitHub run ID
+
+  // Workflow relation
+  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  workflowId String   @map("workflow_id")
+
+  // Run metadata
+  runNumber  Int     @map("run_number") // Sequential run number
+  event      String // push, pull_request, schedule, etc.
+  status     String // queued, in_progress, completed
+  conclusion String? // success, failure, neutral, cancelled, skipped, timed_out, action_required
+
+  // Trigger information
+  headBranch  String? @map("head_branch") // Branch name
+  headSha     String  @map("head_sha") // Commit SHA
+  triggerUser String? @map("trigger_user") // User who triggered the run
+
+  // URLs
+  htmlUrl String @map("html_url")
+
+  // GitHub timestamps
+  runStartedAt    DateTime? @map("run_started_at")
+  githubUpdatedAt DateTime  @map("github_updated_at")
+
+  // Local timestamps
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  lastSyncedAt DateTime @default(now()) @map("last_synced_at")
+
+  // Relations
+  jobs WorkflowJob[]
+
+  @@index([workflowId])
+  @@index([runNumber])
+  @@index([status])
+  @@index([conclusion])
+  @@map("workflow_runs")
+}
+
+// GitHub Actions Workflow Job
+model WorkflowJob {
+  id       String @id @default(cuid())
+  githubId Int    @unique @map("github_id") // GitHub job ID
+
+  // Workflow run relation
+  workflowRun   WorkflowRun @relation(fields: [workflowRunId], references: [id], onDelete: Cascade)
+  workflowRunId String      @map("workflow_run_id")
+
+  // Job metadata
+  name       String // Job name
+  status     String // queued, in_progress, completed
+  conclusion String? // success, failure, neutral, cancelled, skipped, timed_out, action_required
+
+  // Runner information
+  runnerName      String? @map("runner_name") // Runner name
+  runnerGroupName String? @map("runner_group_name") // Runner group name
+
+  // URLs
+  htmlUrl String @map("html_url")
+
+  // GitHub timestamps
+  startedAt   DateTime? @map("started_at")
+  completedAt DateTime? @map("completed_at")
+
+  // Local timestamps
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  lastSyncedAt DateTime @default(now()) @map("last_synced_at")
+
+  @@index([workflowRunId])
+  @@index([status])
+  @@index([conclusion])
+  @@map("workflow_jobs")
 }

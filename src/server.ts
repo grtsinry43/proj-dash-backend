@@ -13,6 +13,9 @@ import { authRoutes } from '@/routes/auth'
 import { repoRoutes } from '@/routes/repos'
 import { activityRoutes } from '@/routes/activity'
 import { codeStatsRoutes } from '@/routes/code-stats'
+import { contributorsRoutes } from '@/routes/contributors'
+import { releasesRoutes } from '@/routes/releases'
+import { actionsRoutes } from '@/routes/actions'
 import { issueRoutes } from '@/routes/issue'
 import { statsRoutes } from '@/routes/stats'
 import { webhookRoutes } from '@/routes/webhooks'
@@ -129,6 +132,18 @@ GitHub API rate limits apply. Authenticated requests: 5,000/hour.
           description: 'Code statistics and analysis (languages, file structure, hot files)',
         },
         {
+          name: 'contributors',
+          description: 'Contributor analysis and statistics',
+        },
+        {
+          name: 'releases',
+          description: 'Release and version management',
+        },
+        {
+          name: 'actions',
+          description: 'CI/CD workflow monitoring (GitHub Actions)',
+        },
+        {
           name: 'issues',
           description: 'Issue and Pull Request management',
         },
@@ -192,6 +207,9 @@ GitHub API rate limits apply. Authenticated requests: 5,000/hour.
   await app.register(repoRoutes, { prefix: '/repos' })
   await app.register(activityRoutes, { prefix: '/activity' })
   await app.register(codeStatsRoutes, { prefix: '/code-stats' })
+  await app.register(contributorsRoutes, { prefix: '/contributors' })
+  await app.register(releasesRoutes, { prefix: '/releases' })
+  await app.register(actionsRoutes, { prefix: '/actions' })
   await app.register(issueRoutes, { prefix: '/issues' })
   await app.register(statsRoutes, { prefix: '/stats' })
   await app.register(webhookRoutes, { prefix: '/webhooks' })
