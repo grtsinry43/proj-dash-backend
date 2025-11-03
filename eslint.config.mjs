@@ -156,6 +156,14 @@ export default tseslint.config(
   },
 
   {
+    files: ['**/routes/**/*.ts'],
+    rules: {
+      'max-lines-per-function': 'off',
+      '@typescript-eslint/require-await': 'off',
+    },
+  },
+
+  {
     files: ['*.config.js', '*.config.mjs', '*.config.ts'],
     rules: {
       'n/no-unpublished-import': 'off',
