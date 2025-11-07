@@ -7,8 +7,11 @@ import {
 } from 'fastify-type-provider-zod'
 import fastifyJwt from '@fastify/jwt'
 import fastifyCors from '@fastify/cors'
+import fastifySwagger from '@fastify/swagger'
+import fastifyApiReference from '@scalar/fastify-api-reference'
 import 'dotenv/config'
 
+import { openApiConfig, scalarConfig } from '@/config/docs'
 import { authRoutes } from '@/routes/auth'
 import { repoRoutes } from '@/routes/repos'
 import { activityRoutes } from '@/routes/activity'
@@ -19,9 +22,8 @@ import { actionsRoutes } from '@/routes/actions'
 import { issueRoutes } from '@/routes/issue'
 import { statsRoutes } from '@/routes/stats'
 import { webhookRoutes } from '@/routes/webhooks'
+import { popularityRoutes } from '@/routes/popularity'
 import { ErrorCode, errorResponse } from '@/types/response'
-
-import swagger from '@fastify/swagger'
 
 // Main function to bootstrap the server
 async function bootstrap() {
@@ -52,154 +54,10 @@ async function bootstrap() {
     credentials: true,
   })
 
-  // Register Swagger for OpenAPI spec generation
-  await app.register(swagger, {
+  // Register Swagger for OpenAPI spec generation (BEFORE routes)
+  await app.register(fastifySwagger, {
+    ...openApiConfig,
     transform: jsonSchemaTransform,
-    openapi: {
-      info: {
-        title: 'Project Dash API',
-        description: `
-# GitHub Dashboard Backend API
-
-Backend API for the Project Dash application - A modern GitHub repository dashboard with real-time statistics and analytics.
-
-## Features
-- 🔐 GitHub OAuth Authentication
-- 📊 Repository Statistics & Analytics
-- 🔔 GitHub Webhook Integration
-- ⚡ Redis Caching for Performance
-
-## Authentication
-Most endpoints require authentication via JWT token.
-
-**How to authenticate:**
-1. Login via \`POST /auth/login\` with GitHub OAuth code
-2. Use the returned JWT token in the \`Authorization\` header: \`Bearer <token>\`
-
-## Rate Limiting
-GitHub API rate limits apply. Authenticated requests: 5,000/hour.
-        `,
-        version: '1.0.0',
-        contact: {
-          name: 'API Support',
-          url: 'https://github.com/yourusername/proj-dash-backend',
-        },
-        license: {
-          name: 'Apache 2.0',
-          url: 'https://www.apache.org/licenses/LICENSE-2.0.html',
-        },
-      },
-      servers: [
-        {
-          url: 'http://localhost:3333',
-          description: 'Local development server',
-        },
-        {
-          url: 'https://zany-couscous-jg4x4q5q6gj2p945-3333.app.github.dev/',
-          description: 'Production server',
-        },
-      ],
-      components: {
-        securitySchemes: {
-          bearerAuth: {
-            type: 'http',
-            scheme: 'bearer',
-            bearerFormat: 'JWT',
-            description: 'Enter your JWT token obtained from `/auth/login`',
-          },
-        },
-      },
-      security: [
-        {
-          bearerAuth: [],
-        },
-      ],
-      tags: [
-        {
-          name: 'auth',
-          description: 'Authentication endpoints',
-        },
-        {
-          name: 'repos',
-          description: 'Repository management and statistics',
-        },
-        {
-          name: 'activity',
-          description: 'Repository activity timeline (commits, PRs, issues)',
-        },
-        {
-          name: 'code-stats',
-          description: 'Code statistics and analysis (languages, file structure, hot files)',
-        },
-        {
-          name: 'contributors',
-          description: 'Contributor analysis and statistics',
-        },
-        {
-          name: 'releases',
-          description: 'Release and version management',
-        },
-        {
-          name: 'actions',
-          description: 'CI/CD workflow monitoring (GitHub Actions)',
-        },
-        {
-          name: 'issues',
-          description: 'Issue and Pull Request management',
-        },
-        {
-          name: 'stats',
-          description: 'User statistics and analytics',
-        },
-        {
-          name: 'webhooks',
-          description: 'GitHub webhook handlers',
-        },
-      ],
-    },
-  })
-
-  app.get('/docs', (_, reply) => {
-    reply.type('text/html').send(`
-      <!doctype html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>API Docs — Project Dashboard</title>
-        <style>
-          body { margin: 0; }
-        </style>
-      </head>
-      <body>
-        <!-- Scalar API Reference -->
-        <script id="api-reference" data-url="/docs/json"></script>
-        <script>
-          var configuration = {
-            theme: 'purple',
-            layout: 'modern',
-            darkMode: true,
-            hideModels: false,
-            hideDownloadButton: false,
-            searchHotKey: 'k',
-            customCss: \`
-              .scalar-app {
-                --scalar-font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
-              }
-            \`
-          }
-
-          var apiReference = document.getElementById('api-reference')
-          apiReference.dataset.configuration = JSON.stringify(configuration)
-        </script>
-        <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
-      </body>
-      </html>
-    `)
-  })
-
-  app.get('/docs/json', (_, reply) => {
-    reply.send(app.swagger())
   })
 
   // Register routes
@@ -212,7 +70,11 @@ GitHub API rate limits apply. Authenticated requests: 5,000/hour.
   await app.register(actionsRoutes, { prefix: '/actions' })
   await app.register(issueRoutes, { prefix: '/issues' })
   await app.register(statsRoutes, { prefix: '/stats' })
+  await app.register(popularityRoutes, { prefix: '/popularity' })
   await app.register(webhookRoutes, { prefix: '/webhooks' })
+
+  // Register Scalar API Reference UI (AFTER routes)
+  await app.register(fastifyApiReference, scalarConfig)
 
   // Add 404 not found handler
   app.setNotFoundHandler((request, reply) => {

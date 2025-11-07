@@ -57,6 +57,54 @@ export interface RealtimeStats {
   openIssuesCount: number
 }
 
+// Traffic views data from GitHub API (14 days only)
+export interface TrafficViewsData {
+  count: number // Total views
+  uniques: number // Unique visitors
+  views: {
+    timestamp: string // ISO date string
+    count: number
+    uniques: number
+  }[]
+}
+
+// Traffic clones data from GitHub API (14 days only)
+export interface TrafficClonesData {
+  count: number // Total clones
+  uniques: number // Unique cloners
+  clones: {
+    timestamp: string // ISO date string
+    count: number
+    uniques: number
+  }[]
+}
+
+// Traffic referrers data from GitHub API (14 days only)
+export interface TrafficReferrer {
+  referrer: string
+  count: number
+  uniques: number
+}
+
+// Traffic paths data from GitHub API (14 days only)
+export interface TrafficPath {
+  path: string
+  title: string
+  count: number
+  uniques: number
+}
+
+// Stargazer with timestamp (requires special Accept header)
+export interface StargazerWithTimestamp {
+  starred_at: string
+  user: {
+    login: string
+    id: number
+    avatar_url: string
+    html_url: string
+  }
+}
+
 /**
  * Exchange GitHub OAuth code for access token
  * Works with both OAuth Apps and GitHub Apps (user-to-server flow)
@@ -332,5 +380,179 @@ export class GitHubService {
     }
 
     return stats
+  }
+
+  /**
+   * Get traffic views data (14 days only)
+   * ⚠️ GitHub only retains 14 days of traffic data
+   * @see https://docs.github.com/en/rest/metrics/traffic
+   */
+  async getTrafficViews(owner: string, repo: string): Promise<TrafficViewsData> {
+    const cacheKey = `repo:traffic:views:${owner}/${repo}`
+    const CACHE_TTL = 3600 // 1 hour cache
+
+    try {
+      const cached = await redis.get(cacheKey)
+      if (cached) {
+        return JSON.parse(cached as string) as TrafficViewsData
+      }
+    } catch (error) {
+      console.warn('Redis cache unavailable:', error)
+    }
+
+    const { data } = await this.octokit.repos.getViews({ owner, repo })
+
+    const trafficData: TrafficViewsData = {
+      count: data.count,
+      uniques: data.uniques,
+      views: data.views.map((view) => ({
+        timestamp: view.timestamp,
+        count: view.count,
+        uniques: view.uniques,
+      })),
+    }
+
+    try {
+      await redis.set(cacheKey, JSON.stringify(trafficData), { ex: CACHE_TTL })
+    } catch (error) {
+      console.warn('Failed to cache traffic views:', error)
+    }
+
+    return trafficData
+  }
+
+  /**
+   * Get traffic clones data (14 days only)
+   * ⚠️ GitHub only retains 14 days of traffic data
+   * @see https://docs.github.com/en/rest/metrics/traffic
+   */
+  async getTrafficClones(owner: string, repo: string): Promise<TrafficClonesData> {
+    const cacheKey = `repo:traffic:clones:${owner}/${repo}`
+    const CACHE_TTL = 3600 // 1 hour cache
+
+    try {
+      const cached = await redis.get(cacheKey)
+      if (cached) {
+        return JSON.parse(cached as string) as TrafficClonesData
+      }
+    } catch (error) {
+      console.warn('Redis cache unavailable:', error)
+    }
+
+    const { data } = await this.octokit.repos.getClones({ owner, repo })
+
+    const trafficData: TrafficClonesData = {
+      count: data.count,
+      uniques: data.uniques,
+      clones: data.clones.map((clone) => ({
+        timestamp: clone.timestamp,
+        count: clone.count,
+        uniques: clone.uniques,
+      })),
+    }
+
+    try {
+      await redis.set(cacheKey, JSON.stringify(trafficData), { ex: CACHE_TTL })
+    } catch (error) {
+      console.warn('Failed to cache traffic clones:', error)
+    }
+
+    return trafficData
+  }
+
+  /**
+   * Get top referrers (14 days only)
+   * @see https://docs.github.com/en/rest/metrics/traffic
+   */
+  async getTopReferrers(owner: string, repo: string): Promise<TrafficReferrer[]> {
+    const cacheKey = `repo:traffic:referrers:${owner}/${repo}`
+    const CACHE_TTL = 3600 // 1 hour cache
+
+    try {
+      const cached = await redis.get(cacheKey)
+      if (cached) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+        return JSON.parse(cached as string)
+      }
+    } catch (error) {
+      console.warn('Redis cache unavailable:', error)
+    }
+
+    const { data } = await this.octokit.repos.getTopReferrers({ owner, repo })
+
+    const referrers: TrafficReferrer[] = data.map((ref) => ({
+      referrer: ref.referrer,
+      count: ref.count,
+      uniques: ref.uniques,
+    }))
+
+    try {
+      await redis.set(cacheKey, JSON.stringify(referrers), { ex: CACHE_TTL })
+    } catch (error) {
+      console.warn('Failed to cache traffic referrers:', error)
+    }
+
+    return referrers
+  }
+
+  /**
+   * Get top paths (14 days only)
+   * @see https://docs.github.com/en/rest/metrics/traffic
+   */
+  async getTopPaths(owner: string, repo: string): Promise<TrafficPath[]> {
+    const cacheKey = `repo:traffic:paths:${owner}/${repo}`
+    const CACHE_TTL = 3600 // 1 hour cache
+
+    try {
+      const cached = await redis.get(cacheKey)
+      if (cached) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+        return JSON.parse(cached as string)
+      }
+    } catch (error) {
+      console.warn('Redis cache unavailable:', error)
+    }
+
+    const { data } = await this.octokit.repos.getTopPaths({ owner, repo })
+
+    const paths: TrafficPath[] = data.map((p) => ({
+      path: p.path,
+      title: p.title,
+      count: p.count,
+      uniques: p.uniques,
+    }))
+
+    try {
+      await redis.set(cacheKey, JSON.stringify(paths), { ex: CACHE_TTL })
+    } catch (error) {
+      console.warn('Failed to cache traffic paths:', error)
+    }
+
+    return paths
+  }
+
+  /**
+   * Get stargazers with timestamps
+   * ⚠️ Limited to 40,000 stars (400 pages × 100 per page)
+   * Requires special Accept header
+   * @see https://docs.github.com/en/rest/activity/starring
+   */
+  async getStargazersWithTimestamps(
+    owner: string,
+    repo: string,
+    page = 1,
+    perPage = 100
+  ): Promise<StargazerWithTimestamp[]> {
+    const { data } = await this.octokit.request('GET /repos/{owner}/{repo}/stargazers', {
+      owner,
+      repo,
+      per_page: perPage,
+      page,
+      headers: {
+        accept: 'application/vnd.github.star+json',
+      },
+    })
+
+    return data as StargazerWithTimestamp[]
   }
 }

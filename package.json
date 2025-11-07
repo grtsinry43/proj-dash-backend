@@ -27,6 +27,7 @@
     "@octokit/rest": "^22.0.0",
     "@octokit/types": "^15.0.1",
     "@prisma/client": "^6.18.0",
+    "@scalar/fastify-api-reference": "^1.39.2",
     "@upstash/redis": "^1.35.6",
     "axios": "^1.12.2",
     "dotenv": "^17.2.3",

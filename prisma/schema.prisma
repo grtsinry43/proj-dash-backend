@@ -62,11 +62,16 @@ model Repository {
   lastSyncedAt DateTime? @map("last_synced_at") // Last time we synced from GitHub API
 
   // Relations
-  pullRequests PullRequest[]
-  stats        RepositoryStats[]
-  contributors Contributor[]
-  releases     Release[]
-  workflows    Workflow[]
+  pullRequests     PullRequest[]
+  stats            RepositoryStats[]
+  contributors     Contributor[]
+  releases         Release[]
+  workflows        Workflow[]
+  starHistory      StarHistory[]
+  trafficViews     TrafficViews[]
+  trafficClones    TrafficClones[]
+  trafficReferrers TrafficReferrer[]
+  trafficPaths     TrafficPath[]
 
   @@map("repositories")
 }
@@ -360,4 +365,103 @@ model WorkflowJob {
   @@index([status])
   @@index([conclusion])
   @@map("workflow_jobs")
+}
+
+// Star history - track star growth over time
+// GitHub only provides star timestamps via API (limited to 40k stars)
+// We periodically snapshot the current star count for historical tracking
+model StarHistory {
+  id           String     @id @default(cuid())
+  repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  repositoryId Int        @map("repository_id")
+
+  // Star count at this timestamp
+  starCount Int @map("star_count")
+
+  // Timestamp
+  recordedAt DateTime @default(now()) @map("recorded_at")
+
+  @@index([repositoryId, recordedAt])
+  @@map("star_history")
+}
+
+// Traffic views - page view statistics (GitHub only keeps 14 days)
+// Must be collected daily to build historical data
+model TrafficViews {
+  id           String     @id @default(cuid())
+  repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  repositoryId Int        @map("repository_id")
+
+  // View statistics for a specific date
+  viewDate    DateTime @map("view_date") // The date these views occurred
+  viewCount   Int      @default(0) @map("view_count") // Total views
+  uniqueCount Int      @default(0) @map("unique_count") // Unique visitors
+
+  // Timestamp
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([repositoryId, viewDate])
+  @@index([repositoryId, viewDate])
+  @@map("traffic_views")
+}
+
+// Traffic clones - git clone statistics (GitHub only keeps 14 days)
+// Must be collected daily to build historical data
+model TrafficClones {
+  id           String     @id @default(cuid())
+  repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  repositoryId Int        @map("repository_id")
+
+  // Clone statistics for a specific date
+  cloneDate   DateTime @map("clone_date") // The date these clones occurred
+  cloneCount  Int      @default(0) @map("clone_count") // Total clones
+  uniqueCount Int      @default(0) @map("unique_count") // Unique cloners
+
+  // Timestamp
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([repositoryId, cloneDate])
+  @@index([repositoryId, cloneDate])
+  @@map("traffic_clones")
+}
+
+// Traffic referrers - top referring sites (GitHub only keeps 14 days)
+// Snapshot periodically to track where traffic comes from
+model TrafficReferrer {
+  id           String     @id @default(cuid())
+  repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  repositoryId Int        @map("repository_id")
+
+  // Referrer information
+  referrer    String // Referring site (e.g., "github.com", "google.com")
+  viewCount   Int    @default(0) @map("view_count") // Total views from this referrer
+  uniqueCount Int    @default(0) @map("unique_count") // Unique visitors from this referrer
+
+  // Timestamp - when this data was collected
+  recordedAt DateTime @default(now()) @map("recorded_at")
+
+  @@index([repositoryId, recordedAt])
+  @@index([referrer])
+  @@map("traffic_referrers")
+}
+
+// Traffic paths - popular content paths (GitHub only keeps 14 days)
+// Snapshot periodically to track which pages are most viewed
+model TrafficPath {
+  id           String     @id @default(cuid())
+  repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  repositoryId Int        @map("repository_id")
+
+  // Path information
+  path        String // Repository path (e.g., "/blob/main/README.md")
+  title       String // Page title
+  viewCount   Int    @default(0) @map("view_count") // Total views
+  uniqueCount Int    @default(0) @map("unique_count") // Unique visitors
+
+  // Timestamp - when this data was collected
+  recordedAt DateTime @default(now()) @map("recorded_at")
+
+  @@index([repositoryId, recordedAt])
+  @@index([path])
+  @@map("traffic_paths")
 }
