@@ -1,6 +1,7 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 import { z } from 'zod'
 import { authMiddleware } from '@/middlewares/auth.middleware'
+import { workspaceMiddleware } from '@/middlewares/workspace.middleware'
 import { CodeStatsService } from '@/services/code-stats.service'
 import {
   createResponseSchema,
@@ -79,6 +80,7 @@ const fileStructureSummaryResponseSchema = createResponseSchema(fileStructureSum
 export const codeStatsRoutes: FastifyPluginAsyncZod = async (app) => {
   // All routes in this plugin require authentication
   app.addHook('preHandler', authMiddleware)
+  app.addHook('preHandler', workspaceMiddleware)
 
   // Route to get language distribution
   app.get(
@@ -97,7 +99,8 @@ export const codeStatsRoutes: FastifyPluginAsyncZod = async (app) => {
     async (request, reply) => {
       try {
         const { owner, repo } = request.params
-        const { accessToken, username } = request.user
+        const accessToken = request.githubAccessToken
+        const { username } = request.user
         const codeStatsService = new CodeStatsService(accessToken, username)
         const languages = await codeStatsService.getLanguageStats(owner, repo)
         return successResponse(languages)
@@ -127,7 +130,8 @@ export const codeStatsRoutes: FastifyPluginAsyncZod = async (app) => {
     async (request, reply) => {
       try {
         const { owner, repo } = request.params
-        const { accessToken, username } = request.user
+        const accessToken = request.githubAccessToken
+        const { username } = request.user
         const codeStatsService = new CodeStatsService(accessToken, username)
         const frequency = await codeStatsService.getCodeFrequency(owner, repo)
         return successResponse(frequency)
@@ -158,7 +162,8 @@ export const codeStatsRoutes: FastifyPluginAsyncZod = async (app) => {
       try {
         const { owner, repo } = request.params
         const { branch, recursive } = request.query
-        const { accessToken, username } = request.user
+        const accessToken = request.githubAccessToken
+        const { username } = request.user
         const codeStatsService = new CodeStatsService(accessToken, username)
         const fileTree = await codeStatsService.getFileTree(owner, repo, branch, recursive)
         return successResponse(fileTree)
@@ -189,7 +194,8 @@ export const codeStatsRoutes: FastifyPluginAsyncZod = async (app) => {
       try {
         const { owner, repo } = request.params
         const { limit, top } = request.query
-        const { accessToken, username } = request.user
+        const accessToken = request.githubAccessToken
+        const { username } = request.user
         const codeStatsService = new CodeStatsService(accessToken, username)
         const hotFiles = await codeStatsService.getHotFiles(owner, repo, limit, top)
         return successResponse(hotFiles)
@@ -220,7 +226,8 @@ export const codeStatsRoutes: FastifyPluginAsyncZod = async (app) => {
       try {
         const { owner, repo } = request.params
         const { branch } = request.query
-        const { accessToken, username } = request.user
+        const accessToken = request.githubAccessToken
+        const { username } = request.user
         const codeStatsService = new CodeStatsService(accessToken, username)
         const summary = await codeStatsService.getFileStructureSummary(owner, repo, branch)
         return successResponse(summary)

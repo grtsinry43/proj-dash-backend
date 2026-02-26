@@ -1,6 +1,8 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 import { z } from 'zod'
 import * as actionsService from '../services/actions.service'
+import { authMiddleware } from '@/middlewares/auth.middleware'
+import { workspaceMiddleware } from '@/middlewares/workspace.middleware'
 import {
   createResponseSchema,
   ErrorCode,
@@ -95,6 +97,9 @@ const jobsResponseSchema = createResponseSchema(workflowJobInfoSchema.array())
 const statsResponseSchema = createResponseSchema(workflowStatsSchema)
 
 export const actionsRoutes: FastifyPluginAsyncZod = async (fastify) => {
+  fastify.addHook('preHandler', authMiddleware)
+  fastify.addHook('preHandler', workspaceMiddleware)
+
   // Get all workflows for a repository
   fastify.get(
     '/:owner/:repo/workflows',
@@ -112,7 +117,9 @@ export const actionsRoutes: FastifyPluginAsyncZod = async (fastify) => {
     async (request, reply) => {
       try {
         const { owner, repo } = request.params
-        const workflows = await actionsService.getWorkflows(owner, repo)
+        const accessToken = request.githubAccessToken
+        const { sub } = request.user
+        const workflows = await actionsService.getWorkflows(accessToken, sub, owner, repo)
         return successResponse(workflows)
       } catch (err) {
         const error = err as Error
@@ -140,8 +147,10 @@ export const actionsRoutes: FastifyPluginAsyncZod = async (fastify) => {
     async (request, reply) => {
       try {
         const { owner, repo } = request.params
+        const accessToken = request.githubAccessToken
+        const { sub } = request.user
         const { status, perPage, page } = request.query
-        const result = await actionsService.getWorkflowRuns(owner, repo, {
+        const result = await actionsService.getWorkflowRuns(accessToken, sub, owner, repo, {
           status,
           perPage,
           page,
@@ -173,12 +182,21 @@ export const actionsRoutes: FastifyPluginAsyncZod = async (fastify) => {
     async (request, reply) => {
       try {
         const { owner, repo, workflowId } = request.params
+        const accessToken = request.githubAccessToken
+        const { sub } = request.user
         const { status, perPage, page } = request.query
-        const result = await actionsService.getWorkflowRunsByWorkflow(owner, repo, workflowId, {
-          status,
-          perPage,
-          page,
-        })
+        const result = await actionsService.getWorkflowRunsByWorkflow(
+          accessToken,
+          sub,
+          owner,
+          repo,
+          workflowId,
+          {
+            status,
+            perPage,
+            page,
+          }
+        )
         return successResponse(result)
       } catch (err) {
         const error = err as Error
@@ -205,7 +223,9 @@ export const actionsRoutes: FastifyPluginAsyncZod = async (fastify) => {
     async (request, reply) => {
       try {
         const { owner, repo, runId } = request.params
-        const run = await actionsService.getWorkflowRunDetails(owner, repo, runId)
+        const accessToken = request.githubAccessToken
+        const { sub } = request.user
+        const run = await actionsService.getWorkflowRunDetails(accessToken, sub, owner, repo, runId)
         return successResponse(run)
       } catch (err) {
         const error = err as Error
@@ -232,7 +252,9 @@ export const actionsRoutes: FastifyPluginAsyncZod = async (fastify) => {
     async (request, reply) => {
       try {
         const { owner, repo, runId } = request.params
-        const jobs = await actionsService.getWorkflowRunJobs(owner, repo, runId)
+        const accessToken = request.githubAccessToken
+        const { sub } = request.user
+        const jobs = await actionsService.getWorkflowRunJobs(accessToken, sub, owner, repo, runId)
         return successResponse(jobs)
       } catch (err) {
         const error = err as Error
@@ -259,7 +281,9 @@ export const actionsRoutes: FastifyPluginAsyncZod = async (fastify) => {
     async (request, reply) => {
       try {
         const { owner, repo } = request.params
-        const stats = await actionsService.getWorkflowStats(owner, repo)
+        const accessToken = request.githubAccessToken
+        const { sub } = request.user
+        const stats = await actionsService.getWorkflowStats(accessToken, sub, owner, repo)
         return successResponse(stats)
       } catch (err) {
         const error = err as Error

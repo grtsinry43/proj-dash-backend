@@ -12,6 +12,7 @@ const loginBodySchema = z.object({
 // Schema for login response data
 const loginDataSchema = z.object({
   token: z.string(),
+  workspaceId: z.string(),
 })
 
 // Use the unified response format
@@ -50,8 +51,48 @@ export const authRoutes: FastifyPluginAsyncZod = async (app) => {
             githubId: String(githubUser.id),
             username: githubUser.login,
             avatarUrl: githubUser.avatar_url,
+            accessToken,
           },
         })
+
+        if (user.accessToken !== accessToken) {
+          user = await prisma.user.update({
+            where: { id: user.id },
+            data: { accessToken },
+          })
+        }
+
+        const ownerWorkspaceMembership = await prisma.workspaceMember.findFirst({
+          where: {
+            userId: user.id,
+            role: 'OWNER',
+          },
+          select: {
+            workspaceId: true,
+          },
+          orderBy: {
+            createdAt: 'asc',
+          },
+        })
+
+        let workspaceId = ownerWorkspaceMembership?.workspaceId
+
+        if (!workspaceId) {
+          const workspace = await prisma.workspace.create({
+            data: {
+              name: `${user.username}'s Workspace`,
+              createdByUserId: user.id,
+              members: {
+                create: {
+                  userId: user.id,
+                  role: 'OWNER',
+                },
+              },
+            },
+          })
+
+          workspaceId = workspace.id
+        }
 
         // Generate JWT token
         const token = app.jwt.sign(
@@ -59,12 +100,11 @@ export const authRoutes: FastifyPluginAsyncZod = async (app) => {
             sub: user.id,
             username: user.username,
             avatarUrl: user.avatarUrl,
-            accessToken,
           },
           { expiresIn: '1d' }
         )
 
-        return successResponse({ token })
+        return successResponse({ token, workspaceId })
       } catch (error) {
         app.log.error({ error }, 'Authentication Error')
         return reply.status(500).send(errorResponse(ErrorCode.AUTH_FAILED, 'Authentication failed'))

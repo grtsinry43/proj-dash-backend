@@ -8,16 +8,76 @@ generator client {
 }
 
 model User {
+  id                         String                @id @default(cuid())
+  githubId                   String                @unique
+  username                   String
+  avatarUrl                  String
+  accessToken                String? // Store encrypted GitHub access token
+  pullRequest                PullRequest[]
+  workspacesCreated          Workspace[]           @relation("WorkspaceCreator")
+  workspaceMemberships       WorkspaceMember[]
+  monitoredRepositoriesAdded MonitoredRepository[] @relation("MonitoredRepoAddedBy")
+  createdAt                  DateTime              @default(now()) @map("created_at")
+  updatedAt                  DateTime              @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+enum WorkspaceRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+model Workspace {
+  id                    String                @id @default(cuid())
+  name                  String
+  createdByUserId       String                @map("created_by_user_id")
+  createdByUser         User                  @relation("WorkspaceCreator", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  members               WorkspaceMember[]
+  monitoredRepositories MonitoredRepository[]
+  createdAt             DateTime              @default(now()) @map("created_at")
+  updatedAt             DateTime              @updatedAt @map("updated_at")
+
+  @@index([createdByUserId])
+  @@map("workspaces")
+}
+
+model WorkspaceMember {
   id          String        @id @default(cuid())
-  githubId    String        @unique
-  username    String
-  avatarUrl   String
-  accessToken String? // Store encrypted GitHub access token
-  pullRequest PullRequest[]
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId String        @map("workspace_id")
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String        @map("user_id")
+  role        WorkspaceRole @default(MEMBER)
   createdAt   DateTime      @default(now()) @map("created_at")
   updatedAt   DateTime      @updatedAt @map("updated_at")
 
-  @@map("users")
+  @@unique([workspaceId, userId])
+  @@index([userId])
+  @@map("workspace_members")
+}
+
+model MonitoredRepository {
+  id            String      @id @default(cuid())
+  workspace     Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId   String      @map("workspace_id")
+  repository    Repository? @relation(fields: [repositoryId], references: [id], onDelete: SetNull)
+  repositoryId  Int?        @map("repository_id")
+  owner         String
+  name          String
+  fullName      String      @map("full_name")
+  isActive      Boolean     @default(true) @map("is_active")
+  addedByUserId String      @map("added_by_user_id")
+  addedByUser   User        @relation("MonitoredRepoAddedBy", fields: [addedByUserId], references: [id], onDelete: Restrict)
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  @@unique([workspaceId, fullName])
+  @@index([workspaceId, isActive])
+  @@index([repositoryId])
+  @@map("monitored_repositories")
 }
 
 model Repository {
@@ -72,6 +132,7 @@ model Repository {
   trafficClones    TrafficClones[]
   trafficReferrers TrafficReferrer[]
   trafficPaths     TrafficPath[]
+  monitoredIn      MonitoredRepository[]
 
   @@map("repositories")
 }

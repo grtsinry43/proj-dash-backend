@@ -1,6 +1,7 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 import { z } from 'zod'
 import { authMiddleware } from '@/middlewares/auth.middleware'
+import { workspaceMiddleware } from '@/middlewares/workspace.middleware'
 import { ActivityService } from '@/services/activity.service'
 import {
   createResponseSchema,
@@ -109,6 +110,7 @@ const contributorStatsResponseSchema = createResponseSchema(contributorStatsSche
 export const activityRoutes: FastifyPluginAsyncZod = async (app) => {
   // All routes in this plugin require authentication
   app.addHook('preHandler', authMiddleware)
+  app.addHook('preHandler', workspaceMiddleware)
 
   // Route to get recent commits
   app.get(
@@ -129,7 +131,8 @@ export const activityRoutes: FastifyPluginAsyncZod = async (app) => {
       try {
         const { owner, repo } = request.params
         const { per_page } = request.query
-        const { accessToken, username } = request.user
+        const accessToken = request.githubAccessToken
+        const { username } = request.user
         const activityService = new ActivityService(accessToken, username)
         const commits = await activityService.getRecentCommits(owner, repo, per_page)
         return successResponse(commits)
@@ -160,7 +163,8 @@ export const activityRoutes: FastifyPluginAsyncZod = async (app) => {
       try {
         const { owner, repo } = request.params
         const { state, per_page } = request.query
-        const { accessToken, username } = request.user
+        const accessToken = request.githubAccessToken
+        const { username } = request.user
         const activityService = new ActivityService(accessToken, username)
         const pulls = await activityService.getRecentPullRequests(owner, repo, state, per_page)
         return successResponse(pulls)
@@ -191,7 +195,8 @@ export const activityRoutes: FastifyPluginAsyncZod = async (app) => {
       try {
         const { owner, repo } = request.params
         const { state, per_page } = request.query
-        const { accessToken, username } = request.user
+        const accessToken = request.githubAccessToken
+        const { username } = request.user
         const activityService = new ActivityService(accessToken, username)
         const issues = await activityService.getRecentIssues(owner, repo, state, per_page)
         return successResponse(issues)
@@ -221,7 +226,8 @@ export const activityRoutes: FastifyPluginAsyncZod = async (app) => {
     async (request, reply) => {
       try {
         const { owner, repo } = request.params
-        const { accessToken, username } = request.user
+        const accessToken = request.githubAccessToken
+        const { username } = request.user
         const activityService = new ActivityService(accessToken, username)
         const stats = await activityService.getCommitActivityStats(owner, repo)
         return successResponse(stats)
@@ -251,7 +257,8 @@ export const activityRoutes: FastifyPluginAsyncZod = async (app) => {
     async (request, reply) => {
       try {
         const { owner, repo } = request.params
-        const { accessToken, username } = request.user
+        const accessToken = request.githubAccessToken
+        const { username } = request.user
         const activityService = new ActivityService(accessToken, username)
         const stats = await activityService.getContributorStats(owner, repo)
         return successResponse(stats)

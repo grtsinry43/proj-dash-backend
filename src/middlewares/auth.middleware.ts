@@ -1,4 +1,5 @@
 import type { FastifyReply, FastifyRequest } from 'fastify'
+import prisma from '@/lib/prisma'
 import { ErrorCode, errorResponse } from '../types/response'
 
 /**
@@ -11,9 +12,21 @@ export const authMiddleware = async (req: FastifyRequest, reply: FastifyReply) =
   try {
     // This will verify the token and attach the user payload to `req.user`
     await req.jwtVerify()
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  } catch (error) {
+
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.sub },
+      select: { accessToken: true },
+    })
+
+    if (!user?.accessToken) {
+      return await reply
+        .status(401)
+        .send(errorResponse(ErrorCode.UNAUTHORIZED, 'GitHub authorization required'))
+    }
+
+    req.githubAccessToken = user.accessToken
+  } catch (_error) {
     // If verification fails, send an unauthorized error
-    reply.status(401).send(errorResponse(ErrorCode.UNAUTHORIZED, 'Unauthorized'))
+    return reply.status(401).send(errorResponse(ErrorCode.UNAUTHORIZED, 'Unauthorized'))
   }
 }

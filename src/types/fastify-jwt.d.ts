@@ -1,5 +1,5 @@
 // This file extends the types for the @fastify/jwt plugin
-import '@fastify/jwt';
+import '@fastify/jwt'
 
 declare module '@fastify/jwt' {
   /**
@@ -9,10 +9,9 @@ declare module '@fastify/jwt' {
   interface FastifyJWT {
     // The `user` property is what will be available on `request.user`
     user: {
-      sub: string;       // User ID from our database
-      username: string;
-      avatarUrl: string;
-      accessToken: string; // GitHub Access Token
-    };
+      sub: string // User ID from our database
+      username: string
+      avatarUrl: string
+    }
   }
 }

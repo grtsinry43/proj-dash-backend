@@ -1,6 +1,7 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 import { z } from 'zod'
 import { authMiddleware } from '@/middlewares/auth.middleware'
+import { workspaceMiddleware } from '@/middlewares/workspace.middleware'
 import { IssueService } from '@/services/issue.service'
 import {
   createResponseSchema,
@@ -115,6 +116,7 @@ const responseTimeMetricsResponseSchema = createResponseSchema(responseTimeMetri
 export const issueRoutes: FastifyPluginAsyncZod = async (app) => {
   // All routes in this plugin require authentication
   app.addHook('preHandler', authMiddleware)
+  app.addHook('preHandler', workspaceMiddleware)
 
   // Route to get issues
   app.get(
@@ -135,7 +137,8 @@ export const issueRoutes: FastifyPluginAsyncZod = async (app) => {
       try {
         const { owner, repo } = request.params
         const { state, per_page } = request.query
-        const { accessToken, username } = request.user
+        const accessToken = request.githubAccessToken
+        const { username } = request.user
         const issueService = new IssueService(accessToken, username)
         const issues = await issueService.getIssues(owner, repo, state, per_page)
         return successResponse(issues)
@@ -166,7 +169,8 @@ export const issueRoutes: FastifyPluginAsyncZod = async (app) => {
       try {
         const { owner, repo } = request.params
         const { state, per_page } = request.query
-        const { accessToken, username } = request.user
+        const accessToken = request.githubAccessToken
+        const { username } = request.user
         const issueService = new IssueService(accessToken, username)
         const pulls = await issueService.getPullRequests(owner, repo, state, per_page)
         return successResponse(pulls)
@@ -195,7 +199,8 @@ export const issueRoutes: FastifyPluginAsyncZod = async (app) => {
     async (request, reply) => {
       try {
         const { owner, repo } = request.params
-        const { accessToken, username } = request.user
+        const accessToken = request.githubAccessToken
+        const { username } = request.user
         const issueService = new IssueService(accessToken, username)
         const labels = await issueService.getLabels(owner, repo)
         return successResponse(labels)
@@ -224,7 +229,8 @@ export const issueRoutes: FastifyPluginAsyncZod = async (app) => {
     async (request, reply) => {
       try {
         const { owner, repo } = request.params
-        const { accessToken, username } = request.user
+        const accessToken = request.githubAccessToken
+        const { username } = request.user
         const issueService = new IssueService(accessToken, username)
         const labelStats = await issueService.getLabelStats(owner, repo)
         return successResponse(labelStats)
@@ -253,7 +259,8 @@ export const issueRoutes: FastifyPluginAsyncZod = async (app) => {
     async (request, reply) => {
       try {
         const { owner, repo } = request.params
-        const { accessToken, username } = request.user
+        const accessToken = request.githubAccessToken
+        const { username } = request.user
         const issueService = new IssueService(accessToken, username)
         const stats = await issueService.getIssueStats(owner, repo)
         return successResponse(stats)
@@ -282,7 +289,8 @@ export const issueRoutes: FastifyPluginAsyncZod = async (app) => {
     async (request, reply) => {
       try {
         const { owner, repo } = request.params
-        const { accessToken, username } = request.user
+        const accessToken = request.githubAccessToken
+        const { username } = request.user
         const issueService = new IssueService(accessToken, username)
         const stats = await issueService.getPullRequestStats(owner, repo)
         return successResponse(stats)
@@ -311,7 +319,8 @@ export const issueRoutes: FastifyPluginAsyncZod = async (app) => {
     async (request, reply) => {
       try {
         const { owner, repo } = request.params
-        const { accessToken, username } = request.user
+        const accessToken = request.githubAccessToken
+        const { username } = request.user
         const issueService = new IssueService(accessToken, username)
         const metrics = await issueService.getResponseTimeMetrics(owner, repo)
         return successResponse(metrics)

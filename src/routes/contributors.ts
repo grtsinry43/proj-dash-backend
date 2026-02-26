@@ -1,6 +1,7 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 import { z } from 'zod'
 import { authMiddleware } from '@/middlewares/auth.middleware'
+import { workspaceMiddleware } from '@/middlewares/workspace.middleware'
 import { ContributorService } from '@/services/contributor.service'
 import {
   createResponseSchema,
@@ -85,6 +86,7 @@ const contributorDetailResponseSchema = createResponseSchema(contributorDetailSc
 export const contributorsRoutes: FastifyPluginAsyncZod = async (app) => {
   // All routes in this plugin require authentication
   app.addHook('preHandler', authMiddleware)
+  app.addHook('preHandler', workspaceMiddleware)
 
   /**
    * Get basic contributor list
@@ -107,7 +109,8 @@ export const contributorsRoutes: FastifyPluginAsyncZod = async (app) => {
     async (request, reply) => {
       try {
         const { owner, repo } = request.params
-        const { accessToken, username } = request.user
+        const accessToken = request.githubAccessToken
+        const { username } = request.user
         const contributorService = new ContributorService(accessToken, username)
         const contributors = await contributorService.getContributorsList(owner, repo)
         return successResponse(contributors)
@@ -140,7 +143,8 @@ export const contributorsRoutes: FastifyPluginAsyncZod = async (app) => {
     async (request, reply) => {
       try {
         const { owner, repo } = request.params
-        const { accessToken, username } = request.user
+        const accessToken = request.githubAccessToken
+        const { username } = request.user
         const contributorService = new ContributorService(accessToken, username)
         const stats = await contributorService.getContributorStats(owner, repo)
         return successResponse(stats)
@@ -173,7 +177,8 @@ export const contributorsRoutes: FastifyPluginAsyncZod = async (app) => {
     async (request, reply) => {
       try {
         const { owner, repo } = request.params
-        const { accessToken, username } = request.user
+        const accessToken = request.githubAccessToken
+        const { username } = request.user
         const contributorService = new ContributorService(accessToken, username)
         const analysis = await contributorService.analyzeContributors(owner, repo)
         return successResponse(analysis)
@@ -208,7 +213,8 @@ export const contributorsRoutes: FastifyPluginAsyncZod = async (app) => {
       try {
         const { owner, repo } = request.params
         const { limit } = request.query
-        const { accessToken, username } = request.user
+        const accessToken = request.githubAccessToken
+        const { username } = request.user
         const contributorService = new ContributorService(accessToken, username)
         const growth = await contributorService.getContributorGrowth(owner, repo, limit)
         return successResponse(growth)
@@ -241,7 +247,8 @@ export const contributorsRoutes: FastifyPluginAsyncZod = async (app) => {
     async (request, reply) => {
       try {
         const { owner, repo, username } = request.params
-        const { accessToken, username: authUsername } = request.user
+        const accessToken = request.githubAccessToken
+        const { username: authUsername } = request.user
         const contributorService = new ContributorService(accessToken, authUsername)
         const contributor = await contributorService.getContributorDetail(owner, repo, username)
 

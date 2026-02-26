@@ -7,8 +7,19 @@ export class StatsService {
     this.githubService = new GitHubService(accessToken, username)
   }
 
-  async getOverviewStats() {
+  private async getScopedRepositories(monitoredRepoFullNames?: string[]) {
     const repos = await this.githubService.getRepositories()
+
+    if (!monitoredRepoFullNames) {
+      return repos
+    }
+
+    const monitoredSet = new Set(monitoredRepoFullNames)
+    return repos.filter((repo) => monitoredSet.has(repo.full_name))
+  }
+
+  async getOverviewStats(monitoredRepoFullNames?: string[]) {
+    const repos = await this.getScopedRepositories(monitoredRepoFullNames)
     const totalStars = repos.reduce((acc, repo) => acc + (repo.stargazers_count || 0), 0)
     const totalForks = repos.reduce((acc, repo) => acc + (repo.forks_count || 0), 0)
 
@@ -19,8 +30,8 @@ export class StatsService {
     }
   }
 
-  async getActivityStats() {
-    const repos = await this.githubService.getRepositories()
+  async getActivityStats(monitoredRepoFullNames?: string[]) {
+    const repos = await this.getScopedRepositories(monitoredRepoFullNames)
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
 
     const commitPromises = repos.map(async (repo) => {

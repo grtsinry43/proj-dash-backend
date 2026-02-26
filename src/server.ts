@@ -13,6 +13,7 @@ import 'dotenv/config'
 
 import { openApiConfig, scalarConfig } from '@/config/docs'
 import { authRoutes } from '@/routes/auth'
+import { workspacesRoutes } from '@/routes/workspaces'
 import { repoRoutes } from '@/routes/repos'
 import { activityRoutes } from '@/routes/activity'
 import { codeStatsRoutes } from '@/routes/code-stats'
@@ -21,7 +22,6 @@ import { releasesRoutes } from '@/routes/releases'
 import { actionsRoutes } from '@/routes/actions'
 import { issueRoutes } from '@/routes/issue'
 import { statsRoutes } from '@/routes/stats'
-import { webhookRoutes } from '@/routes/webhooks'
 import { popularityRoutes } from '@/routes/popularity'
 import { ErrorCode, errorResponse } from '@/types/response'
 
@@ -62,6 +62,7 @@ async function bootstrap() {
 
   // Register routes
   await app.register(authRoutes, { prefix: '/auth' })
+  await app.register(workspacesRoutes, { prefix: '/workspaces' })
   await app.register(repoRoutes, { prefix: '/repos' })
   await app.register(activityRoutes, { prefix: '/activity' })
   await app.register(codeStatsRoutes, { prefix: '/code-stats' })
@@ -71,7 +72,6 @@ async function bootstrap() {
   await app.register(issueRoutes, { prefix: '/issues' })
   await app.register(statsRoutes, { prefix: '/stats' })
   await app.register(popularityRoutes, { prefix: '/popularity' })
-  await app.register(webhookRoutes, { prefix: '/webhooks' })
 
   // Register Scalar API Reference UI (AFTER routes)
   await app.register(fastifyApiReference, scalarConfig)

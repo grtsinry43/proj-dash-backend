@@ -111,9 +111,7 @@ export interface StargazerWithTimestamp {
  * @see https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-a-user-access-token-for-a-github-app
  */
 export async function exchangeCodeForToken(code: string): Promise<string> {
-  console.log('Exchanging code for token...')
-  console.log('Client ID:', process.env['GITHUB_APP_CLIENT_ID'])
-  console.log('Code:', code.substring(0, 10) + '...')
+  console.info('Exchanging GitHub OAuth code for access token')
 
   const response = await axios.post<GitHubTokenResponse>(
     'https://github.com/login/oauth/access_token',
@@ -127,8 +125,7 @@ export async function exchangeCodeForToken(code: string): Promise<string> {
     }
   )
 
-  console.log('GitHub OAuth response status:', response.status)
-  console.log('GitHub OAuth response data:', response.data)
+  console.info('Received GitHub OAuth response', { status: response.status })
 
   // Check for errors in the response
   if (response.data.error) {
@@ -169,7 +166,7 @@ export class GitHubService {
     try {
       const cachedRepos = await redis.get(cacheKey)
       if (cachedRepos) {
-        console.log('Cache hit for repositories')
+        console.info('Cache hit for repositories')
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         return JSON.parse(cachedRepos as string)
       }
@@ -221,7 +218,7 @@ export class GitHubService {
     try {
       const cached = await redis.get(cacheKey)
       if (cached) {
-        console.log(`Cache hit for repository overview: ${owner}/${repo}`)
+        console.info(`Cache hit for repository overview: ${owner}/${repo}`)
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         return JSON.parse(cached as string)
       }

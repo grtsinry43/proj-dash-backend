@@ -1,6 +1,7 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 import { z } from 'zod'
 import { authMiddleware } from '@/middlewares/auth.middleware'
+import { workspaceMiddleware } from '@/middlewares/workspace.middleware'
 import { PopularityService } from '@/services/popularity.service'
 import {
   createResponseSchema,
@@ -109,6 +110,7 @@ const recordStarResponseSchema = createResponseSchema(recordStarResultSchema)
 export const popularityRoutes: FastifyPluginAsyncZod = async (app) => {
   // All routes in this plugin require authentication
   app.addHook('preHandler', authMiddleware)
+  app.addHook('preHandler', workspaceMiddleware)
 
   // Get popularity summary (all metrics in one call)
   app.get(
@@ -128,7 +130,8 @@ export const popularityRoutes: FastifyPluginAsyncZod = async (app) => {
     async (request, reply) => {
       try {
         const { owner, repo } = request.params
-        const { accessToken, username } = request.user
+        const accessToken = request.githubAccessToken
+        const { username } = request.user
         const popularityService = new PopularityService(accessToken, username)
         const summary = await popularityService.getPopularitySummary(owner, repo)
         return successResponse(summary)
@@ -159,7 +162,8 @@ export const popularityRoutes: FastifyPluginAsyncZod = async (app) => {
       try {
         const { owner, repo } = request.params
         const { limit } = request.query
-        const { accessToken, username } = request.user
+        const accessToken = request.githubAccessToken
+        const { username } = request.user
         const popularityService = new PopularityService(accessToken, username)
 
         // Get repository ID first
@@ -192,7 +196,8 @@ export const popularityRoutes: FastifyPluginAsyncZod = async (app) => {
     async (request, reply) => {
       try {
         const { owner, repo } = request.params
-        const { accessToken, username } = request.user
+        const accessToken = request.githubAccessToken
+        const { username } = request.user
         const popularityService = new PopularityService(accessToken, username)
         const result = await popularityService.recordStarCount(owner, repo)
         return successResponse(result)
@@ -223,7 +228,8 @@ export const popularityRoutes: FastifyPluginAsyncZod = async (app) => {
       try {
         const { owner, repo } = request.params
         const { limit } = request.query
-        const { accessToken, username } = request.user
+        const accessToken = request.githubAccessToken
+        const { username } = request.user
         const popularityService = new PopularityService(accessToken, username)
 
         const repositoryId = await popularityService.getRepositoryId(owner, repo)
@@ -255,7 +261,8 @@ export const popularityRoutes: FastifyPluginAsyncZod = async (app) => {
     async (request, reply) => {
       try {
         const { owner, repo } = request.params
-        const { accessToken, username } = request.user
+        const accessToken = request.githubAccessToken
+        const { username } = request.user
         const popularityService = new PopularityService(accessToken, username)
         const result = await popularityService.syncTrafficViews(owner, repo)
         return successResponse(result)
@@ -286,7 +293,8 @@ export const popularityRoutes: FastifyPluginAsyncZod = async (app) => {
       try {
         const { owner, repo } = request.params
         const { limit } = request.query
-        const { accessToken, username } = request.user
+        const accessToken = request.githubAccessToken
+        const { username } = request.user
         const popularityService = new PopularityService(accessToken, username)
 
         const repositoryId = await popularityService.getRepositoryId(owner, repo)
@@ -319,7 +327,8 @@ export const popularityRoutes: FastifyPluginAsyncZod = async (app) => {
     async (request, reply) => {
       try {
         const { owner, repo } = request.params
-        const { accessToken, username } = request.user
+        const accessToken = request.githubAccessToken
+        const { username } = request.user
         const popularityService = new PopularityService(accessToken, username)
         const result = await popularityService.syncTrafficClones(owner, repo)
         return successResponse(result)
@@ -350,7 +359,8 @@ export const popularityRoutes: FastifyPluginAsyncZod = async (app) => {
       try {
         const { owner, repo } = request.params
         const { days } = request.query
-        const { accessToken, username } = request.user
+        const accessToken = request.githubAccessToken
+        const { username } = request.user
         const popularityService = new PopularityService(accessToken, username)
 
         const repositoryId = await popularityService.getRepositoryId(owner, repo)
@@ -384,7 +394,8 @@ export const popularityRoutes: FastifyPluginAsyncZod = async (app) => {
       try {
         const { owner, repo } = request.params
         const { days } = request.query
-        const { accessToken, username } = request.user
+        const accessToken = request.githubAccessToken
+        const { username } = request.user
         const popularityService = new PopularityService(accessToken, username)
 
         const repositoryId = await popularityService.getRepositoryId(owner, repo)
@@ -417,7 +428,8 @@ export const popularityRoutes: FastifyPluginAsyncZod = async (app) => {
     async (request, reply) => {
       try {
         const { owner, repo } = request.params
-        const { accessToken, username } = request.user
+        const accessToken = request.githubAccessToken
+        const { username } = request.user
         const popularityService = new PopularityService(accessToken, username)
         const result = await popularityService.syncAllTrafficData(owner, repo)
         return successResponse(result)

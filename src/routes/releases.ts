@@ -1,6 +1,7 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 import { z } from 'zod'
 import { authMiddleware } from '@/middlewares/auth.middleware'
+import { workspaceMiddleware } from '@/middlewares/workspace.middleware'
 import { ReleaseService } from '@/services/release.service'
 import {
   createResponseSchema,
@@ -91,6 +92,7 @@ const generatedNotesResponseSchema = createResponseSchema(generatedNotesSchema)
 export const releasesRoutes: FastifyPluginAsyncZod = async (app) => {
   // All routes in this plugin require authentication
   app.addHook('preHandler', authMiddleware)
+  app.addHook('preHandler', workspaceMiddleware)
 
   /**
    * Get all releases
@@ -113,7 +115,8 @@ export const releasesRoutes: FastifyPluginAsyncZod = async (app) => {
       try {
         const { owner, repo } = request.params
         const { per_page } = request.query
-        const { accessToken, username } = request.user
+        const accessToken = request.githubAccessToken
+        const { username } = request.user
         const releaseService = new ReleaseService(accessToken, username)
         const releases = await releaseService.getAllReleases(owner, repo, per_page)
         return successResponse(releases)
@@ -145,7 +148,8 @@ export const releasesRoutes: FastifyPluginAsyncZod = async (app) => {
     async (request, reply) => {
       try {
         const { owner, repo } = request.params
-        const { accessToken, username } = request.user
+        const accessToken = request.githubAccessToken
+        const { username } = request.user
         const releaseService = new ReleaseService(accessToken, username)
         const release = await releaseService.getLatestRelease(owner, repo)
 
@@ -182,7 +186,8 @@ export const releasesRoutes: FastifyPluginAsyncZod = async (app) => {
     async (request, reply) => {
       try {
         const { owner, repo } = request.params
-        const { accessToken, username } = request.user
+        const accessToken = request.githubAccessToken
+        const { username } = request.user
         const releaseService = new ReleaseService(accessToken, username)
         const stats = await releaseService.getReleaseStats(owner, repo)
         return successResponse(stats)
@@ -214,7 +219,8 @@ export const releasesRoutes: FastifyPluginAsyncZod = async (app) => {
     async (request, reply) => {
       try {
         const { owner, repo, tag } = request.params
-        const { accessToken, username } = request.user
+        const accessToken = request.githubAccessToken
+        const { username } = request.user
         const releaseService = new ReleaseService(accessToken, username)
         const release = await releaseService.getReleaseByTag(owner, repo, tag)
 
@@ -255,7 +261,8 @@ export const releasesRoutes: FastifyPluginAsyncZod = async (app) => {
       try {
         const { owner, repo } = request.params
         const body = request.body
-        const { accessToken, username } = request.user
+        const accessToken = request.githubAccessToken
+        const { username } = request.user
         const releaseService = new ReleaseService(accessToken, username)
         const notes = await releaseService.generateReleaseNotes(owner, repo, body)
         return successResponse(notes)

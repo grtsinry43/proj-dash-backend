@@ -16,7 +16,6 @@ Backend API for the Project Dash application - A modern GitHub repository dashbo
 ## Features
 - 🔐 GitHub OAuth Authentication
 - 📊 Repository Statistics & Analytics
-- 🔔 GitHub Webhook Integration
 - ⚡ Redis Caching for Performance
 
 ## Authentication
@@ -70,6 +69,10 @@ GitHub API rate limits apply. Authenticated requests: 5,000/hour.
         description: 'Authentication endpoints',
       },
       {
+        name: 'workspaces',
+        description: 'Workspace and member management',
+      },
+      {
         name: 'repos',
         description: 'Repository management and statistics',
       },
@@ -104,10 +107,6 @@ GitHub API rate limits apply. Authenticated requests: 5,000/hour.
       {
         name: 'popularity',
         description: 'Repository popularity metrics (stars, traffic views, clones)',
-      },
-      {
-        name: 'webhooks',
-        description: 'GitHub webhook handlers',
       },
     ],
   },

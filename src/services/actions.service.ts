@@ -2,10 +2,6 @@ import { Octokit } from '@octokit/rest'
 import prisma from '../lib/prisma'
 import { redis } from '@/lib/redis'
 
-const octokit = new Octokit({
-  auth: process.env['GITHUB_TOKEN'],
-})
-
 const CACHE_TTL = {
   WORKFLOWS: 30 * 60, // 30 minutes
   RUNS: 5 * 60, // 5 minutes
@@ -62,11 +58,25 @@ interface WorkflowStatsInfo {
   recentRuns: WorkflowRunInfo[]
 }
 
+function createOctokit(accessToken: string): Octokit {
+  return new Octokit({ auth: accessToken })
+}
+
+function scopedCacheKey(cacheScope: string, key: string): string {
+  return `actions:${cacheScope}:${key}`
+}
+
 /**
  * Get all workflows for a repository
  */
-export async function getWorkflows(owner: string, repo: string): Promise<WorkflowInfo[]> {
-  const cacheKey = `workflows:${owner}/${repo}`
+export async function getWorkflows(
+  accessToken: string,
+  cacheScope: string,
+  owner: string,
+  repo: string
+): Promise<WorkflowInfo[]> {
+  const octokit = createOctokit(accessToken)
+  const cacheKey = scopedCacheKey(cacheScope, `workflows:${owner}/${repo}`)
 
   // Try to get from cache
   try {
@@ -101,7 +111,6 @@ export async function getWorkflows(owner: string, repo: string): Promise<Workflo
 
   if (repository) {
     // Save to database
-
     for (const workflow of workflows) {
       await prisma.workflow.upsert({
         where: { githubId: workflow.id },
@@ -142,6 +151,8 @@ export async function getWorkflows(owner: string, repo: string): Promise<Workflo
  * Get workflow runs for a repository
  */
 export async function getWorkflowRuns(
+  accessToken: string,
+  cacheScope: string,
   owner: string,
   repo: string,
   options?: {
@@ -150,8 +161,12 @@ export async function getWorkflowRuns(
     page?: number
   }
 ): Promise<{ runs: WorkflowRunInfo[]; totalCount: number }> {
+  const octokit = createOctokit(accessToken)
   const { status, perPage = 30, page = 1 } = options ?? {}
-  const cacheKey = `workflow-runs:${owner}/${repo}:${status ?? 'all'}:${String(page)}`
+  const cacheKey = scopedCacheKey(
+    cacheScope,
+    `workflow-runs:${owner}/${repo}:${status ?? 'all'}:${String(page)}`
+  )
 
   // Try to get from cache
   try {
@@ -199,7 +214,6 @@ export async function getWorkflowRuns(
 
   if (repository) {
     // Save to database
-
     for (const run of runs) {
       // Find or create workflow
       // eslint-disable-next-line no-await-in-loop
@@ -258,6 +272,8 @@ export async function getWorkflowRuns(
  * Get runs for a specific workflow
  */
 export async function getWorkflowRunsByWorkflow(
+  accessToken: string,
+  cacheScope: string,
   owner: string,
   repo: string,
   workflowId: number,
@@ -267,8 +283,12 @@ export async function getWorkflowRunsByWorkflow(
     page?: number
   }
 ): Promise<{ runs: WorkflowRunInfo[]; totalCount: number }> {
+  const octokit = createOctokit(accessToken)
   const { status, perPage = 30, page = 1 } = options ?? {}
-  const cacheKey = `workflow-runs:${owner}/${repo}:${String(workflowId)}:${status ?? 'all'}:${String(page)}`
+  const cacheKey = scopedCacheKey(
+    cacheScope,
+    `workflow-runs:${owner}/${repo}:${String(workflowId)}:${status ?? 'all'}:${String(page)}`
+  )
 
   // Try to get from cache
   try {
@@ -324,11 +344,14 @@ export async function getWorkflowRunsByWorkflow(
  * Get details of a specific workflow run
  */
 export async function getWorkflowRunDetails(
+  accessToken: string,
+  cacheScope: string,
   owner: string,
   repo: string,
   runId: number
 ): Promise<WorkflowRunInfo> {
-  const cacheKey = `workflow-run:${owner}/${repo}:${String(runId)}`
+  const octokit = createOctokit(accessToken)
+  const cacheKey = scopedCacheKey(cacheScope, `workflow-run:${owner}/${repo}:${String(runId)}`)
 
   // Try to get from cache
   try {
@@ -376,11 +399,14 @@ export async function getWorkflowRunDetails(
  * Get jobs for a specific workflow run
  */
 export async function getWorkflowRunJobs(
+  accessToken: string,
+  cacheScope: string,
   owner: string,
   repo: string,
   runId: number
 ): Promise<WorkflowJobInfo[]> {
-  const cacheKey = `workflow-jobs:${owner}/${repo}:${String(runId)}`
+  const octokit = createOctokit(accessToken)
+  const cacheKey = scopedCacheKey(cacheScope, `workflow-jobs:${owner}/${repo}:${String(runId)}`)
 
   // Try to get from cache
   try {
@@ -466,8 +492,13 @@ export async function getWorkflowRunJobs(
 /**
  * Get workflow statistics (success rate, average duration, etc.)
  */
-export async function getWorkflowStats(owner: string, repo: string): Promise<WorkflowStatsInfo> {
-  const cacheKey = `workflow-stats:${owner}/${repo}`
+export async function getWorkflowStats(
+  accessToken: string,
+  cacheScope: string,
+  owner: string,
+  repo: string
+): Promise<WorkflowStatsInfo> {
+  const cacheKey = scopedCacheKey(cacheScope, `workflow-stats:${owner}/${repo}`)
 
   // Try to get from cache
   try {
@@ -480,7 +511,7 @@ export async function getWorkflowStats(owner: string, repo: string): Promise<Wor
   }
 
   // Fetch recent runs
-  const { runs } = await getWorkflowRuns(owner, repo, { perPage: 100 })
+  const { runs } = await getWorkflowRuns(accessToken, cacheScope, owner, repo, { perPage: 100 })
 
   // Calculate statistics
   const completedRuns = runs.filter((r) => r.status === 'completed')
